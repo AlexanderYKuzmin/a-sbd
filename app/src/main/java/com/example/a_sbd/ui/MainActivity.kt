@@ -1,10 +1,8 @@
 package com.example.a_sbd.ui
 
 import android.bluetooth.BluetoothGattCharacteristic
-import android.content.*
 import android.graphics.Typeface
 import android.os.Bundle
-import android.os.IBinder
 import android.util.Log
 import android.view.*
 import android.widget.ImageView
@@ -17,8 +15,12 @@ import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
+import androidx.sqlite.db.SupportSQLiteOpenHelper
+import androidx.work.Configuration
+import androidx.work.WorkManager
 import com.example.a_sbd.ASBDApp
 import com.example.a_sbd.R
+import com.example.a_sbd.data.workers.AppWorkerFactory
 import com.example.a_sbd.databinding.ActivityMainBinding
 import com.example.a_sbd.di.ASBDComponent
 import com.example.a_sbd.extensions.dpToIntPx
@@ -26,16 +28,6 @@ import com.example.a_sbd.extensions.hasRequiredRuntimePermissions
 import com.example.a_sbd.extensions.requestRelevantRuntimePermissions
 import com.example.a_sbd.receivers.ScanBroadcastReceiver
 import com.example.a_sbd.services.BleService
-import com.example.a_sbd.services.BleService.Companion.ACTION_DATA_AVAILABLE
-import com.example.a_sbd.services.BleService.Companion.ACTION_DATA_READ
-import com.example.a_sbd.services.BleService.Companion.ACTION_DATA_WRITTEN
-import com.example.a_sbd.services.BleService.Companion.ACTION_GATT_CONNECTED
-import com.example.a_sbd.services.BleService.Companion.ACTION_GATT_DISCONNECTED
-import com.example.a_sbd.services.BleService.Companion.ACTION_GATT_SERVICES_DISCOVERED
-import com.example.a_sbd.services.BleService.Companion.ACTION_MODEM_READY
-import com.example.a_sbd.services.BleService.Companion.ACTION_SERVICE_CONNECTED
-import com.example.a_sbd.services.BleService.Companion.ACTION_SERVICE_IDLE
-import com.example.a_sbd.services.BleService.Companion.ACTION_SIGNAL_LEVEL
 import com.example.a_sbd.services.BleServiceConnection
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -53,6 +45,9 @@ class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var viewModelFactory: ViewModelFactory
 
+    /*@Inject
+    lateinit var appWorkerFactory: AppWorkerFactory*/
+
     @Inject
     lateinit var bleServiceConnection: BleServiceConnection
     private var bleService : BleService? = null
@@ -61,7 +56,7 @@ class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var scanBroadcastReceiver: ScanBroadcastReceiver
 
-    private val mainActivityViewModel by lazy {
+    private val viewModel by lazy {
         ViewModelProvider(this, viewModelFactory)[MainActivityViewModel::class.java]
     }
 
@@ -77,6 +72,8 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         appComponent.inject(this)
 
+        //WorkManager.initialize(this, Configuration.Builder().setWorkerFactory(appWorkerFactory).build())
+
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -90,29 +87,18 @@ class MainActivity : AppCompatActivity() {
             { str, bundle ->
                 Log.d("MainActivity", "BTN in fragment pressed!!!!")
                 if (bundle.getBoolean("isSingleChatStarted")) {
-                    mainActivityViewModel.handleUiMode(SINGLE_CHAT_MODE, bundle)
+                    viewModel.handleUiMode(SINGLE_CHAT_MODE, bundle)
                 } else {
-                    mainActivityViewModel.handleUiMode(CHAT_CONTACTS_MODE, bundle)
+                    viewModel.handleUiMode(CHAT_CONTACTS_MODE, bundle)
                 }
             }
 
         setupToolbar()
 
-        var isConnected = false
+        //var isConnected = false
         binding.ibtnDisconnected.setOnClickListener {
             if (checkBluetoothPermissions()) {
-                it.background = when(isConnected) {
-                    false -> {
-                        //mainActivityViewModel.startScan()
-                        setServiceConnection()
-                        getDrawable(R.drawable.connected_2)
-                    }
-                    true -> {
-                        //mainActivityViewModel.stopScan()
-                        getDrawable(R.drawable.disconnected_2)
-                    }
-                }
-                isConnected = !isConnected
+                viewModel.handleBleConnection()
             }
         }
 
@@ -127,7 +113,7 @@ class MainActivity : AppCompatActivity() {
         setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
 
-        mainActivityViewModel.appState.observe(this) {
+        viewModel.appState.observe(this) {
             renderUi(it)
         }
 
@@ -135,7 +121,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        registerReceiver(gattUpdateReceiver, makeGattUpdateIntentFilter())
+        //registerReceiver(gattUpdateReceiver, makeGattUpdateIntentFilter())
         /*if (bleService != null) {
             val result = bleService!!.connect(deviceAddress)
             Log.d(TAG, "Connect request result=$result")
@@ -144,10 +130,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
-        unregisterReceiver(gattUpdateReceiver)
+        //unregisterReceiver(gattUpdateReceiver)
     }
 
-    private fun makeGattUpdateIntentFilter(): IntentFilter? {
+    /*private fun makeGattUpdateIntentFilter(): IntentFilter? {
         return IntentFilter().apply {
             addAction(ACTION_GATT_CONNECTED)
             addAction(ACTION_GATT_DISCONNECTED)
@@ -160,12 +146,12 @@ class MainActivity : AppCompatActivity() {
             addAction(ACTION_MODEM_READY)
             addAction(ACTION_SERVICE_CONNECTED)
         }
-    }
+    }*/
 
-    private val gattUpdateReceiver: BroadcastReceiver = object : BroadcastReceiver() {
+    /*private val gattUpdateReceiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
-                /*ACTION_GATT_CONNECTED -> {
+                *//*ACTION_GATT_CONNECTED -> {
                     isConnected = true
                     updateConnectionState("Connected")
                 }
@@ -209,14 +195,14 @@ class MainActivity : AppCompatActivity() {
                 ACTION_MODEM_READY -> {
                     val isModemReady = intent.getBooleanExtra(MODEM_READY, false)
                     handleModemReady(isModemReady)
-                }*/
+                }*//*
                 ACTION_SERVICE_CONNECTED -> {
                     Log.d(TAG, " Service connection successful")
                     //bleService?.startScan()
                 }
             }
         }
-    }
+    }*/
 
     /*private val bleServiceConnection: ServiceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
@@ -239,17 +225,18 @@ class MainActivity : AppCompatActivity() {
         }
     }
 */
-    private fun setServiceConnection() {
+    // I got rid of it for a while
+    /*private fun setServiceConnection() {
         //serviceConnection = BleServiceConnection(this, deviceAddress)
         val gattServiceIntent = Intent(this, BleService::class.java)
         bindService(gattServiceIntent, bleServiceConnection, Context.BIND_AUTO_CREATE)
-    }
+    }*/
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             android.R.id.home -> {
                 findNavController(R.id.nav_host_fragment_activity_main).popBackStack()
-                mainActivityViewModel.handleUiMode(CHAT_CONTACTS_MODE, bundleOf())
+                viewModel.handleUiMode(CHAT_CONTACTS_MODE, bundleOf())
                 return true
             }
         }
