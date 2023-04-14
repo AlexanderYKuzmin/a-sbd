@@ -4,6 +4,14 @@
     <string name="title_dashboard">Сервисы</string>
     <string name="title_notifications">Уведомления</string>
 
+    <!--Main Activity -->
+    <string name="dialog_fragment_close_device_list">Свернуть</string>
+
     <!-- Chats -->
     <string name="float_btn_description">Add chat contact</string>
+
+
+    <!-- Workers -->
+    <string name="ble_scan_work">BleScan</string>
+    <string name="ble_connect_work">BleConnect</string>
 </resources>

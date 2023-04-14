@@ -12,11 +12,11 @@ class ASBDApp : Application() {
 
     lateinit var component: ASBDComponent
 
-    @Inject
     lateinit var factory: AppWorkerFactory
 
     override fun onCreate() {
         component = DaggerASBDComponent.factory().create(this)
+        factory = component.getWorkerFactory()
         super.onCreate()
 
         WorkManager.initialize(

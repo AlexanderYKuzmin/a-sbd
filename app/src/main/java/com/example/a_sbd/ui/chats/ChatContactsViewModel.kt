@@ -1,14 +1,9 @@
 package com.example.a_sbd.ui.chats
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import com.example.a_sbd.ASBDApp
 import com.example.a_sbd.domain.model.ChatContact
 import com.example.a_sbd.domain.usecases.GetAllChatContactsUseCase
-import java.util.*
 import javax.inject.Inject
 
 

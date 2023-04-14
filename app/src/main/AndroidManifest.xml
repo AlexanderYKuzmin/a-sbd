@@ -46,7 +46,7 @@
                 android:name="android.app.lib_name"
                 android:value="" />
         </activity>
-        <!--<service android:name=".services.BleService"
+        <!--<service android:name=".services.ScanService"
             android:enabled="true">
         </service>-->
         <provider
@@ -57,6 +57,12 @@
             <meta-data android:name="androidx.work.WorkManagerInitializer"
                 tools:node="remove" />
         </provider>
+        <!--<receiver android:name=".receivers.ScanBroadcastReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="a_sbd.ui.devices_found"/>
+            </intent-filter>
+        </receiver>-->
     </application>
 
 </manifest>

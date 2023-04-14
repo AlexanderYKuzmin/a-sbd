@@ -1,6 +1,10 @@
 package com.example.a_sbd.ui
 
+import android.app.Service
 import android.bluetooth.BluetoothGattCharacteristic
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Typeface
 import android.os.Bundle
 import android.util.Log
@@ -15,20 +19,19 @@ import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
-import androidx.sqlite.db.SupportSQLiteOpenHelper
-import androidx.work.Configuration
 import androidx.work.WorkManager
 import com.example.a_sbd.ASBDApp
 import com.example.a_sbd.R
-import com.example.a_sbd.data.workers.AppWorkerFactory
 import com.example.a_sbd.databinding.ActivityMainBinding
 import com.example.a_sbd.di.ASBDComponent
+import com.example.a_sbd.domain.model.DeviceSimple
 import com.example.a_sbd.extensions.dpToIntPx
 import com.example.a_sbd.extensions.hasRequiredRuntimePermissions
 import com.example.a_sbd.extensions.requestRelevantRuntimePermissions
 import com.example.a_sbd.receivers.ScanBroadcastReceiver
-import com.example.a_sbd.services.BleService
-import com.example.a_sbd.services.BleServiceConnection
+//import com.example.a_sbd.services.BleService
+//import com.example.a_sbd.services.ScanServiceConnection
+//import com.example.a_sbd.services.ScanService
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -48,9 +51,10 @@ class MainActivity : AppCompatActivity() {
     /*@Inject
     lateinit var appWorkerFactory: AppWorkerFactory*/
 
-    @Inject
-    lateinit var bleServiceConnection: BleServiceConnection
-    private var bleService : BleService? = null
+    /*@Inject
+    lateinit var scanServiceConnection: ScanServiceConnection*/
+
+    //private var scanService : ScanService? = null
     private var characteristic: BluetoothGattCharacteristic? = null
 
     @Inject
@@ -60,6 +64,8 @@ class MainActivity : AppCompatActivity() {
         ViewModelProvider(this, viewModelFactory)[MainActivityViewModel::class.java]
     }
 
+    private val workManager = WorkManager.getInstance(this)
+
     private val deviceAddress: String? = null
     private lateinit var ivSignal: View
 
@@ -67,12 +73,9 @@ class MainActivity : AppCompatActivity() {
         (application as ASBDApp).component
     }
 
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         appComponent.inject(this)
-
-        //WorkManager.initialize(this, Configuration.Builder().setWorkerFactory(appWorkerFactory).build())
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -80,7 +83,9 @@ class MainActivity : AppCompatActivity() {
         /*val gattServiceIntent = Intent(this, BleService::class.java)
         bindService(gattServiceIntent, bleServiceConnection, Context.BIND_AUTO_CREATE)*/
 
-        //setServiceConnection()
+        //setScanServiceConnection()
+
+        //registerScanReceiver()
 
         supportFragmentManager
             .setFragmentResultListener("single_chat_started", this)
@@ -98,7 +103,8 @@ class MainActivity : AppCompatActivity() {
         //var isConnected = false
         binding.ibtnDisconnected.setOnClickListener {
             if (checkBluetoothPermissions()) {
-                viewModel.handleBleConnection()
+                //viewModel.handleBleConnectionButton()
+                startBleScan()
             }
         }
 
@@ -117,6 +123,29 @@ class MainActivity : AppCompatActivity() {
             renderUi(it)
         }
 
+        viewModel.devices.observe(this) {
+            viewModel.stopScan()
+            //launchShowDevicesFragment(it)
+        }
+
+        /*viewModel.isScanningWorkStarted.observe(this) {
+            Log.d(TAG, "Scanning starting")
+            *//*workManager
+                .getWorkInfosForUniqueWorkLiveData(SCANNING_WORK)
+                .observe(this) {
+                    viewModel.handleBleScanWorkInfos(it)
+                }*//*
+        }*/
+    }
+
+    private fun startBleScan() {
+        if (checkBluetoothPermissions()) {
+            viewModel.startScan()
+            Log.d("BLE2", "Start scan from activity")
+            Thread.sleep(1000)
+        } else {
+            throw java.lang.RuntimeException("No permissions")
+        }
     }
 
     override fun onResume() {
@@ -132,6 +161,15 @@ class MainActivity : AppCompatActivity() {
         super.onPause()
         //unregisterReceiver(gattUpdateReceiver)
     }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        workManager.cancelAllWork()
+
+        Log.d(TAG, "On destroy")
+    }
+
+
 
     /*private fun makeGattUpdateIntentFilter(): IntentFilter? {
         return IntentFilter().apply {
@@ -204,7 +242,7 @@ class MainActivity : AppCompatActivity() {
         }
     }*/
 
-    /*private val bleServiceConnection: ServiceConnection = object : ServiceConnection {
+    /*private val scanServiceConnection: ServiceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             bleService = (service as BleService.LocalBinder).getService()
             Log.d(TAG, "Service $bleService")
@@ -223,13 +261,27 @@ class MainActivity : AppCompatActivity() {
             Log.d(TAG, "Service Disconnected $bleService")
             bleService = null
         }
-    }
-*/
-    // I got rid of it for a while
-    /*private fun setServiceConnection() {
+    }*/
+
+    /*private fun setScanServiceConnection() {
         //serviceConnection = BleServiceConnection(this, deviceAddress)
-        val gattServiceIntent = Intent(this, BleService::class.java)
-        bindService(gattServiceIntent, bleServiceConnection, Context.BIND_AUTO_CREATE)
+        scanServiceConnection.onScanServiceConnectionListener = object : ScanServiceConnection.OnScanServiceConnectionListener {
+            override fun setServiceToViewModel(service: ScanService?) {
+                viewModel.scanService = service
+            }
+        }
+        val scanServiceIntent = Intent(this, ScanService::class.java)
+        bindService(scanServiceIntent, scanServiceConnection, Context.BIND_AUTO_CREATE)
+    }
+
+    private fun registerScanReceiver() {
+        scanBroadcastReceiver.onScanResultListener = object : ScanBroadcastReceiver.OnScanResultListener {
+            override fun setScanResult(devices: List<DeviceSimple>?) {
+                Log.d(TAG, "Working scan listener...")
+                viewModel.handleBleScanResult(devices)
+            }
+        }
+        registerReceiver(scanBroadcastReceiver, setScanWorkIntentFilter())
     }*/
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -375,9 +427,26 @@ class MainActivity : AppCompatActivity() {
         return false
     }
 
+    private fun launchShowDevicesFragment(devicesSimple: List<DeviceSimple>) {
+        val alertDialog = DeviceListDialogFragment(devicesSimple).apply {
+            onDeviceItemClickListener = object : DeviceListDialogFragment.OnDeviceItemClickListener {
+                override fun onDeviceItemClick(position: Int) {
+                    viewModel.setConnection(position)
+                }
+            }
+        }
+        alertDialog.show(this.supportFragmentManager.beginTransaction(), null)
+    }
+
+    private fun setScanWorkIntentFilter(): IntentFilter? {
+        return IntentFilter().apply {
+            addAction(ACTION_DEVICES_FOUND)
+        }
+    }
+
     companion object {
         const val TAG = "service"
-        const val SCAN_TAG = "scan_tag"
+        //const val SCAN_TAG = "scan_tag"
 
         const val SINGLE_CHAT_MODE = 200
         const val CHAT_CONTACTS_MODE = 201
@@ -385,5 +454,14 @@ class MainActivity : AppCompatActivity() {
         const val SCANNING_LOG_TAG = "Scanning"
         const val CONNECTION_LOG_TAG = "Connection"
         const val GATT_CALLBACK_LOG_TAG = "GattCallback"
+
+        const val SCANNING_WORK = "scanning_work"
+        const val CONNECTING_WORK = "connecting_work"
+        const val DEVICES_KEY = "devices"
+
+        const val SCAN_INTENT_REQUEST_CODE = 1
+
+        //receiver data
+        const val ACTION_DEVICES_FOUND = "a_sbd.ui.devices_found"
     }
 }

@@ -15,7 +15,7 @@ class BluetoothModule {
     //private val bluetoothManager: BluetoothManager?
 
 
-    @Provides
+    /*@Provides
     fun provideBluetoothManager(application: Application) : BluetoothManager {
         return application.applicationContext.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
     }
@@ -35,7 +35,7 @@ class BluetoothModule {
         return ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_BALANCED)
             .build()
-    }
+    }*/
 
     /*@Provides
     fun provideBluetoothAdapter(): BluetoothAdapter {

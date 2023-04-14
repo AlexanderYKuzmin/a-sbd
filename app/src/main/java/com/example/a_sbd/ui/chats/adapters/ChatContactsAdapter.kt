@@ -43,5 +43,4 @@ class ChatContactsAdapter(
     interface OnChatClickListener {
         fun onChatClick(id: Long, name: String)
     }
-
 }
