@@ -9,6 +9,7 @@ import android.content.Intent
 import android.util.Log
 import com.example.a_sbd.data.workers.BleConnectionWorker
 import com.example.a_sbd.ui.MainActivity.Companion.TAG
+import java.util.*
 
 class BleConnectionGattCallback(
     //private val onGattCallbackListener: BleConnectionWorker.OnGattCallbackListener
@@ -23,19 +24,21 @@ class BleConnectionGattCallback(
             // successfully connected to the GATT Server
             //connectionState = STATE_CONNECTED
             //broadcastUpdate(ACTION_GATT_CONNECTED)
-            onGattCallbackListener?.onConnectionEstablished(true)
+            //onGattCallbackListener?.onConnectionEstablished(true)
             Log.d(TAG, "Connected")
+            gatt?.discoverServices()
         } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
             // disconnected from the GATT Server
             //connectionState = STATE_DISCONNECTED
             //broadcastUpdate(ACTION_GATT_DISCONNECTED)
-            onGattCallbackListener?.onConnectionEstablished(false)
+            onGattCallbackListener?.onConnectionEstablished(false, null)
         }
-        gatt?.discoverServices()
+
     }
     override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
         if (status == BluetoothGatt.GATT_SUCCESS) {
-           // broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED)
+            val characteristic = gatt?.getService(UNKNOWN_SERVICE)?.getCharacteristic(UNKNOWN_CHARACTERISTIC)
+            onGattCallbackListener?.onConnectionEstablished(true, characteristic)
         } else {
             //Log.w(TAG, "onServicesDiscovered received: $status")
         }
@@ -99,6 +102,13 @@ class BleConnectionGattCallback(
     }*/
 
     interface OnGattCallbackListener {
-        fun onConnectionEstablished(isConnectionEstablished: Boolean)
+        fun onConnectionEstablished(isConnectionEstablished: Boolean,  characteristic: BluetoothGattCharacteristic?)
+
+        fun onServicesDisCovered(characteristic: BluetoothGattCharacteristic)
+    }
+
+    companion object {
+        private val UNKNOWN_SERVICE = UUID.fromString("0000ffe0-0000-1000-8000-00805f9b34fb")
+        private val UNKNOWN_CHARACTERISTIC = UUID.fromString("0000ffe1-0000-1000-8000-00805f9b34fb")
     }
 }

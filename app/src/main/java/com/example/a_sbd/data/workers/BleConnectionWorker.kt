@@ -3,57 +3,65 @@ package com.example.a_sbd.data.workers
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothGatt
-import android.bluetooth.le.BluetoothLeScanner
-import android.bluetooth.le.ScanSettings
+import android.bluetooth.BluetoothGattCharacteristic
 import android.content.Context
 import android.util.Log
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.Observer
+import android.util.LogPrinter
 import androidx.work.CoroutineWorker
+import androidx.work.Data
 import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
 import com.example.a_sbd.data.bluetooth.BleConnectionGattCallback
+import com.example.a_sbd.data.mapper.JsonConverter
+import com.example.a_sbd.data.workers.commands.BLE_CONNECTION_ESTABLISHED
+import com.example.a_sbd.data.workers.commands.BLE_CONNECTION_FAILED
+import com.example.a_sbd.data.workers.commands.SET_BLE_CONNECTION
+import com.example.a_sbd.domain.model.WorkBleConnectionResponse
 import com.example.a_sbd.domain.usecases.SetBleConnectionUseCase.Companion.DEVICE_ADDRESS
 import com.example.a_sbd.ui.MainActivity.Companion.TAG
-import kotlinx.coroutines.CoroutineScope
+import com.example.a_sbd.ui.MainActivityViewModel.Companion.COMMAND
+import com.example.a_sbd.ui.MainActivityViewModel.Companion.REPORT
 import kotlinx.coroutines.delay
 import javax.inject.Inject
 
 class BleConnectionWorker(
     private val appContext: Context,
     private val workerParameters: WorkerParameters,
-    //private val bleAdapter: BluetoothAdapter,
+    private val bleAdapter: BluetoothAdapter,
+    private val jsonConverter: JsonConverter
 ) : CoroutineWorker(appContext, workerParameters){
 
     private var bluetoothGatt: BluetoothGatt? = null
 
-    private var _isConnectionEstablished = false
+    private var characteristic: BluetoothGattCharacteristic? = null
 
-    private val bluetoothGattCallback = BleConnectionGattCallback().apply {
-        onGattCallbackListener = object : BleConnectionGattCallback.OnGattCallbackListener {
-            override fun onConnectionEstablished(isConnectionEstablished: Boolean) {
-                _isConnectionEstablished = isConnectionEstablished
-            }
-        }
-    }
+    private var _isWorkDone = false
+
+    private var response: WorkBleConnectionResponse? = null
 
     @SuppressLint("MissingPermission")
     override suspend fun doWork(): Result {
         Log.d(TAG, "Do work BleConnection")
-        val address = inputData.getString(DEVICE_ADDRESS)
-        if (address != null) {
-            //setConnection(address)
+        _isWorkDone = false
+        val command = inputData.getInt(COMMAND, -1)
 
-            val boolean = false//setConnection(address)
-            Log.d(TAG, "Connection established: $boolean")
-            while (true) {
-                if (_isConnectionEstablished) {
-                    Log.d(TAG, "bluetooth is connected")
-                    return Result.success()
-                }
-                delay(500)
-                Log.d(TAG, "awaiting connection...")
+        val report = Data.Builder()
+
+        when (command) {
+            SET_BLE_CONNECTION -> {
+                setConnection()
             }
+            // todo Check modem level
+        }
+
+        while (true) {
+            if (_isWorkDone) {
+                Log.d(TAG, "The work is completed")
+
+                return Result.success(report.putString(REPORT, jsonConverter.toJson(report)).build())
+            }
+            delay(500)
+            Log.d(TAG, "awaiting connection...")
         }
 
         //val modemCommand = inputData.getString()
@@ -64,29 +72,50 @@ class BleConnectionWorker(
     }
 
 
-    /*@SuppressLint("MissingPermission")
-    private fun setConnection(address: String): Boolean {
+    @SuppressLint("MissingPermission")
+    private fun setConnection() {
         Log.d(TAG, "Setting connection...")
+        val address = inputData.getString(DEVICE_ADDRESS)
         //bluetoothGatt = bleAdapter.getRemoteDevice(address).connectGatt(appContext, false, bluetoothGattCallback)
         bleAdapter.let { adapter ->
             try {
                 val device = adapter.getRemoteDevice(address)
                 // connect to the GATT server on the device
                 bluetoothGatt = device.connectGatt(appContext, false, bluetoothGattCallback)
-                return true
             } catch (exception: IllegalArgumentException) {
                 Log.w(TAG, "Device not found with provided address.")
-                return false
             }
         } ?: run {
             Log.w(TAG, "BluetoothAdapter not initialized")
-            return false
+
         }
 
-    }*/
+    }
+
+    private val bluetoothGattCallback = BleConnectionGattCallback().apply {
+        onGattCallbackListener = object : BleConnectionGattCallback.OnGattCallbackListener {
+            override fun onConnectionEstablished(isConnectionEstablished: Boolean, chara: BluetoothGattCharacteristic?) {
+
+                response = WorkBleConnectionResponse(
+                    SET_BLE_CONNECTION,
+                    null,
+                    if (isConnectionEstablished && chara != null) BLE_CONNECTION_ESTABLISHED
+                    else BLE_CONNECTION_FAILED,
+                    null
+                )
+                characteristic = chara
+                _isWorkDone = true
+            }
+
+            override fun onServicesDisCovered(characteristic: BluetoothGattCharacteristic) {
+                TODO("Not yet implemented")
+            }
+        }
+    }
 
     class Factory @Inject constructor(
-        //private val bleAdapter: BluetoothAdapter
+        private val bleAdapter: BluetoothAdapter,
+        private val jsonConverter: JsonConverter
     ): ChildWorkerFactory {
         override fun create(
             appContext: Context,
@@ -95,6 +124,8 @@ class BleConnectionWorker(
             return BleConnectionWorker(
                 appContext,
                 workerParameters,
+                bleAdapter,
+                jsonConverter
                 )
         }
     }

@@ -9,7 +9,7 @@ import com.example.a_sbd.ui.chats.ChatContactsViewModel
 import dagger.BindsInstance
 import dagger.Component
 
-@Component(modules = [DataModule::class, ViewModelModule::class,
+@Component(modules = [DataModule::class, ViewModelModule::class, BluetoothModule::class,
      WorkerBindingModule::class])
 interface ASBDComponent {
 

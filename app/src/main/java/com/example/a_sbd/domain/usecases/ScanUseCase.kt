@@ -7,63 +7,58 @@ import android.bluetooth.le.ScanSettings
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import com.example.a_sbd.data.bluetooth.BleScanCallback
+import androidx.work.Data
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequest
+import androidx.work.WorkManager
+import com.example.a_sbd.data.workers.BleScanWorker
 import com.example.a_sbd.domain.model.DeviceSimple
+import com.example.a_sbd.ui.MainActivity.Companion.IS_SCAN_START
+import com.example.a_sbd.ui.MainActivity.Companion.SCANNING_DATA
+import com.example.a_sbd.ui.MainActivity.Companion.SCANNING_WORK
 import com.example.a_sbd.ui.MainActivity.Companion.TAG
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
-class ScanUseCase (
+class ScanUseCase @Inject constructor (
     private val application: Application,
-    /*private val bleScanner: BluetoothLeScanner,
-    private val settings: ScanSettings,
-    private val bleScanCallback: BleScanCallback*/
 ) {
 
-    private val _devicesSimple = MutableLiveData<List<DeviceSimple>>()
+    /*private val _devicesSimple = MutableLiveData<List<DeviceSimple>>()
         val devicesSimple: LiveData<List<DeviceSimple>>
-        get() = _devicesSimple
+        get() = _devicesSimple*/
 
-    /*@SuppressLint("MissingPermission")
-    operator fun invoke(){
-        Log.d(TAG, "Invoke")
-        startScan()
+    @SuppressLint("MissingPermission")
+    operator fun invoke(isScanStart: Boolean){
+        Log.d(TAG, "Invoke scan use case")
 
-        *//*val scanRequest = OneTimeWorkRequest.Builder(BleScanWorker::class.java)
+        val data = Data.Builder()
+            .putBoolean(IS_SCAN_START, isScanStart)
+            .build()
+
+
+        val scanRequest = OneTimeWorkRequest.Builder(BleScanWorker::class.java)
             //.setId(UUID.fromString(SCAN_ID))
-            //.setInputData()
+            .setInputData(data)
             .build()
 
         WorkManager.getInstance(application).enqueueUniqueWork(
             SCANNING_WORK, ExistingWorkPolicy.REPLACE, scanRequest)
 
-        //WorkManager.getInstance(application).enqueue(scanRequest)*//*
-    }*/
+        //WorkManager.getInstance(application).enqueue(scanRequest)
+    }
 
-   /* @SuppressLint("MissingPermission")
+    @SuppressLint("MissingPermission")
     fun startScan() {
 
-        bleScanCallback.apply {
-            onBleScanCallbackListener = object : BleScanCallback.OnBleScanCallbackListener {
-                override fun onDeviceListReady(string: String) {
-                    Log.d(TAG, "onDeviceList ready and $string")
 
-                    //_devicesSimple.value = devicesSimple
-                }
 
-                override fun onFailed() {
-                    Log.d(TAG, "Got failes to scan use case")
-                }
-            }
-        }
-
-        bleScanner.startScan(null, settings, bleScanCallback)
     }
 
     @SuppressLint("MissingPermission")
     fun stopScan() {
-        bleScanner.stopScan(bleScanCallback)
-    }*/
+
+    }
 }

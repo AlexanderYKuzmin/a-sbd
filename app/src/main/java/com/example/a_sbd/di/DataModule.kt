@@ -4,7 +4,6 @@ import android.content.BroadcastReceiver
 import com.example.a_sbd.data.repository.ASBDoRepositoryImpl
 import com.example.a_sbd.domain.ASBDRepository
 import com.example.a_sbd.domain.model.DeviceSimple
-import com.example.a_sbd.receivers.ScanBroadcastReceiver
 import dagger.Binds
 import dagger.Module
 import dagger.Provides

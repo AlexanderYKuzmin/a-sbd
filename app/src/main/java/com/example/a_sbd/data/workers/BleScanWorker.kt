@@ -13,12 +13,11 @@ import androidx.work.CoroutineWorker
 import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
-import com.example.a_sbd.data.bluetooth.BleScanCallback
 import com.example.a_sbd.data.mapper.JsonConverter
 import com.example.a_sbd.domain.model.DeviceSimple
-import com.example.a_sbd.receivers.ScanBroadcastReceiver
 import com.example.a_sbd.ui.MainActivity.Companion.ACTION_DEVICES_FOUND
 import com.example.a_sbd.ui.MainActivity.Companion.DEVICES_KEY
+import com.example.a_sbd.ui.MainActivity.Companion.IS_SCAN_START
 import com.example.a_sbd.ui.MainActivity.Companion.SCAN_INTENT_REQUEST_CODE
 import com.example.a_sbd.ui.MainActivity.Companion.TAG
 import com.google.gson.Gson
@@ -35,28 +34,15 @@ class BleScanWorker (
      private val workerParameters: WorkerParameters,
      private val bleScanner: BluetoothLeScanner,
      private val scanSettings: ScanSettings,
-     //private val jsonConverter: JsonConverter
 ) : CoroutineWorker(appContext, workerParameters) {
-
-    private var devicesSimple: List<DeviceSimple>? = null
-
-    /*private val bleScanCallback = BleScanCallback(object : BleScanCallback.OnBleScanCallbackListener {
-        override fun onDeviceListReady(devicesSimple: List<DeviceSimple>) {
-            this@BleScanWorker.devicesSimple = devicesSimple
-            Log.d(TAG, "devicesSimple in listener: ${devicesSimple.size}")
-        }
-    })*/
 
     @SuppressLint("MissingPermission")
     override suspend fun doWork(): Result {
         Log.d(TAG, "do work scanner")
 
-        /*bleScanner.startScan(null, scanSettings, bleScanCallback)
-        Log.d(TAG, "bleScanner: $bleScanner")*/
-        val intent = Intent(
-            appContext,
-            ScanBroadcastReceiver::class.java
-        ).setAction(ACTION_DEVICES_FOUND)
+        val isScanStart = inputData.getBoolean(IS_SCAN_START, false)
+
+        val intent = Intent(ACTION_DEVICES_FOUND)
 
         val pendingIntent = PendingIntent.getBroadcast(
             appContext,
@@ -64,34 +50,17 @@ class BleScanWorker (
             intent,
             PendingIntent.FLAG_MUTABLE
         )
-        val res = bleScanner.startScan(null, scanSettings, pendingIntent)
-        /*while (true)
-        {
-            Log.d(TAG, "in the cycling. deviceSimple: ${devicesSimple?.size}")
-            if (devicesSimple != null) {
-                Log.d(TAG, "in the cycling. deviceSimple: ${devicesSimple?.size}")
-                runBlocking {
-                    launch { bleScanner.stopScan(bleScanCallback) }
-                }
+        if (isScanStart) {
+            val res = bleScanner.startScan(null, scanSettings, pendingIntent)
+            Log.d(TAG, "scan result res = $res, start scanning")
+        } else {
+            Log.d(TAG, "scan worker stop scanning")
+            bleScanner.stopScan(pendingIntent)
+        }
 
-                val devicesJson = jsonConverter.toJson(devicesSimple!!)
-                val outputData = workDataOf(DEVICES_KEY to devicesJson)
-                return Result.success(outputData)
-            }
-            delay(5000)
-        }*/
-            /*val devicesJson = Gson().toJson(listOf(
-            DeviceSimple("name1", "44:55:66"),
-            DeviceSimple("BLE05", "78:C5:E5:72:CD:84")
-            )
-        )*/
-        delay(10000)
-        Log.d(TAG, "scan result res = $res")
-        bleScanner.stopScan(pendingIntent)
         return Result.success()
     }
 
-    //@AssistedFactory
     class Factory @Inject constructor(
         private val bleScanner: BluetoothLeScanner,
         private val scanSettings: ScanSettings,

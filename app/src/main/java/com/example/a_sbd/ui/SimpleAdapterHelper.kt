@@ -18,9 +18,9 @@ interface SimpleAdapterHelper {
 
     //fun getAdapter(): SimpleAdapter
 
-    fun <T> getAdapter(list: List<T?>?): SimpleAdapter
+    fun <T> getAdapter(list: List<T>?): SimpleAdapter
 
-    fun <T> updateAdapter(list: List<T?>)
+    fun <T> updateAdapter(list: List<T>)
 
     fun clear() {
         data.clear()

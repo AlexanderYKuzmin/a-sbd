@@ -11,6 +11,7 @@ import com.example.a_sbd.data.workers.BleConnectionWorker
 import com.example.a_sbd.data.workers.BleScanWorker
 import com.example.a_sbd.ui.MainActivity
 import com.example.a_sbd.ui.MainActivity.Companion.CONNECTING_WORK
+import com.example.a_sbd.ui.MainActivityViewModel.Companion.CONNECTION_TAG
 import javax.inject.Inject
 
 class SetBleConnectionUseCase @Inject constructor(
@@ -24,6 +25,7 @@ class SetBleConnectionUseCase @Inject constructor(
             .build()
 
         val connectRequest = OneTimeWorkRequest.Builder(BleConnectionWorker::class.java)
+            .addTag(CONNECTION_TAG)
             .setInputData(inputData)
             .build()
 

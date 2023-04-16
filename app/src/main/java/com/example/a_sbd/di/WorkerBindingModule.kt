@@ -15,10 +15,10 @@ interface WorkerBindingModule {
     @WorkerKey(BleModemServiceWorker::class)
     fun bindBleModemServiceWorker(factory: BleModemServiceWorker.Factory): ChildWorkerFactory
 
-    /*@Binds
+    @Binds
     @IntoMap
     @WorkerKey(BleScanWorker::class)
-    fun bindBleScanWorker(factory: BleScanWorker.Factory): ChildWorkerFactory*/
+    fun bindBleScanWorker(factory: BleScanWorker.Factory): ChildWorkerFactory
 
     @Binds
     @IntoMap

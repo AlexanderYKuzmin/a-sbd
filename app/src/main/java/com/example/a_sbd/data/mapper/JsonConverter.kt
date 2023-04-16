@@ -18,4 +18,8 @@ class JsonConverter @Inject constructor(){
         val arrayListDeviceSimpleType = object : TypeToken<ArrayList<DeviceSimple>>() {}.type
         return gson.fromJson(jsonString, arrayListDeviceSimpleType)
     }
+
+    fun <T> fromJsonToSimpleDataClass(jsonString: String, typeClass: Class<T>): T {
+        return gson.fromJson(jsonString, typeClass)
+    }
 }

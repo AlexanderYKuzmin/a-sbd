@@ -10,10 +10,13 @@ import com.example.a_sbd.ui.MainActivity.Companion.TAG
 import javax.inject.Inject
 
 
+/*
 @SuppressLint("MissingPermission")
-class BleScanCallback @Inject constructor() : ScanCallback() {
+class BleScanCallback (
+    private val onBleScanCallbackListener: OnBleScanCallbackListener
+) : ScanCallback() {
 
-    var onBleScanCallbackListener: OnBleScanCallbackListener? = null
+    //var onBleScanCallbackListener: OnBleScanCallbackListener? = null
 
     private val devices = mutableListOf<BluetoothDevice>()
     private val devicesSimple: List<DeviceSimple> by lazy {
@@ -22,12 +25,10 @@ class BleScanCallback @Inject constructor() : ScanCallback() {
 
     @SuppressLint("MissingPermission")
     override fun onScanResult(callbackType: Int, result: ScanResult) {
-        onBleScanCallbackListener?.onDeviceListReady("READY")
-        //Log.d(TAG, "Found device: ${result.device}")
         val indexQuery = devices.indexOfFirst { it.address == result.device.address }
         if (indexQuery != -1) {// device is already exist
             devices[indexQuery] = result.device
-            //onBleScanCallbackListener?.onDeviceListReady(devicesSimple)
+            onBleScanCallbackListener.onDeviceListReady(devicesSimple)
 
         } else {
             with(result.device) {
@@ -47,9 +48,8 @@ class BleScanCallback @Inject constructor() : ScanCallback() {
     }
 
     interface OnBleScanCallbackListener {
-        //fun onDeviceListReady(devicesSimple: List<DeviceSimple>)
-        fun onDeviceListReady(string: String)
+        fun onDeviceListReady(devicesSimple: List<DeviceSimple>)
 
         fun onFailed()
     }
-}
+}*/

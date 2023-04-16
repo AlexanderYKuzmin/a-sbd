@@ -18,11 +18,13 @@ class DeviceAdapterHelper(
     override val itemLayout: Int
         get() = R.layout.item_device_list
 
-    override fun <T> getAdapter(list: List<T?>?): SimpleAdapter {
-        list?.let {
+    override fun <T> getAdapter(list: List<T>?): SimpleAdapter {
+        list?.let { list ->
             list.forEach {
                 it as DeviceSimple
-                val m: Map<String, String> = mapOf(from[0] to it.name!!, from[1] to it.address!!)
+                val name = it.name ?: ""
+                val address = it.address ?: throw java.lang.RuntimeException("Device's address can not be null.")
+                val m: Map<String, String> = mapOf(ATTRIBUTE_NAME to name, ATTRIBUTE_ADDRESS to address)
                 data.add(m)
             }
         }
@@ -30,11 +32,11 @@ class DeviceAdapterHelper(
 
     }
 
-    override fun <T> updateAdapter(list: List<T?>) {
+    override fun <T> updateAdapter(list: List<T>) {
         clear()
         list.forEach {
             it as DeviceSimple
-            val m: Map<String, String> = mapOf(from[0] to it.name!!, from[1] to it.address!!)
+            val m: Map<String, String> = mapOf(ATTRIBUTE_NAME to it.name!!, ATTRIBUTE_ADDRESS to it.address!!)
             data.add(m)
         }
     }
