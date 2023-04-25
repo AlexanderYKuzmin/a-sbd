@@ -18,8 +18,10 @@ import android.widget.ImageView
 import android.widget.TextView
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.NavController
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupActionBarWithNavController
@@ -33,7 +35,20 @@ import com.example.a_sbd.domain.model.DeviceSimple
 import com.example.a_sbd.extensions.dpToIntPx
 import com.example.a_sbd.extensions.hasRequiredRuntimePermissions
 import com.example.a_sbd.extensions.requestRelevantRuntimePermissions
+import com.example.a_sbd.services.BleService.Companion.ACTION_DATA_AVAILABLE
+import com.example.a_sbd.services.BleService.Companion.ACTION_DATA_READ
+import com.example.a_sbd.services.BleService.Companion.ACTION_DATA_WRITTEN
+import com.example.a_sbd.services.BleService.Companion.ACTION_GATT_CONNECTED
+import com.example.a_sbd.services.BleService.Companion.ACTION_GATT_DISCONNECTED
+import com.example.a_sbd.services.BleService.Companion.ACTION_GATT_SERVICES_DISCOVERED
+import com.example.a_sbd.services.BleService.Companion.ACTION_MODEM_READY
+import com.example.a_sbd.services.BleService.Companion.ACTION_SERVICE_CONNECTED
+import com.example.a_sbd.services.BleService.Companion.ACTION_SERVICE_IDLE
+import com.example.a_sbd.services.BleService.Companion.ACTION_SIGNAL_LEVEL
+import com.example.a_sbd.ui.MainActivityViewModel.Companion.CHECK_SIGNAL_WORK
 import com.example.a_sbd.ui.MainActivityViewModel.Companion.CONNECTION_TAG
+import com.example.a_sbd.ui.MainActivityViewModel.Companion.CONNECTION_WORK
+import com.example.a_sbd.ui.chats.ChatContactsFragmentDirections
 //import com.example.a_sbd.services.BleService
 //import com.example.a_sbd.services.ScanServiceConnection
 //import com.example.a_sbd.services.ScanService
@@ -42,7 +57,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), DeviceListDialogFragment.OnDeviceItemClickListener {
 
     private lateinit var binding: ActivityMainBinding
 
@@ -74,8 +89,16 @@ class MainActivity : AppCompatActivity() {
     private val deviceAddress: String? = null
     private lateinit var ivSignal: View
 
+    private var isDevicesListLocked = false
+
+    private var stateConnected = false
+
     private val appComponent by lazy {
         (application as ASBDApp).component
+    }
+
+    private val navController: NavController by lazy {
+        findNavController(R.id.nav_host_fragment_activity_main)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -106,44 +129,61 @@ class MainActivity : AppCompatActivity() {
         setupToolbar()
 
         //var isConnected = false
-        binding.ibtnDisconnected.setOnClickListener {
-            if (checkBluetoothPermissions()) {
-                //viewModel.handleBleConnectionButton()
-                startBleScan()
-            }
-        }
 
         val navView: BottomNavigationView = binding.navView
-        val navController = findNavController(R.id.nav_host_fragment_activity_main)
+        //val navController = findNavController(R.id.nav_host_fragment_activity_main)
         val appBarConfiguration = AppBarConfiguration(
             setOf(
-                R.id.navigation_chat, R.id.navigation_dashboard, R.id.navigation_notifications
+                R.id.navigation_chat,
+                R.id.navigation_dashboard,
+                R.id.navigation_notifications
             )
         )
 
         setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
 
+        binding.ibtnDisconnected.setOnClickListener {
+            if (checkBluetoothPermissions()) {
+                viewModel.handleBleConnectionPressed()
+
+                if (!viewModel.isBleConnected) {
+                    navController.navigate(R.id.scanningShowFragment)
+                    startBleScan()
+                } else {
+                    viewModel.removeConnection()
+                }
+            }
+        }
+
         viewModel.appState.observe(this) {
+            if (stateConnected  != it.isBleConnectedIcon) {
+                navController.popBackStack(R.id.connectShowFragment, true)
+            }
+
             renderUi(it)
         }
 
         viewModel.devicesSimple.observe(this) {
-            launchShowDevicesFragment(it)
+            if (it.isNotEmpty() && !isDevicesListLocked) {
+                isDevicesListLocked = true
+                navController.popBackStack()
+                launchShowDevicesFragment(it)
+            }
         }
 
-        /*viewModel.isScanningWorkStarted.observe(this) {
-            Log.d(TAG, "Scanning starting")
-            *//*workManager
-                .getWorkInfosForUniqueWorkLiveData(SCANNING_WORK)
-                .observe(this) {
-                    viewModel.handleBleScanWorkInfos(it)
-                }*//*
-        }*/
-        workManager.getWorkInfosForUniqueWorkLiveData(CONNECTION_TAG)
+
+        workManager.pruneWork()
+        /*workManager.getWorkInfosForUniqueWorkLiveData(CONNECTION_WORK)
             .observe(this) {
-                viewModel.handleBleConnectionWorkResult(it)
-            }
+                Log.d(TAG, "MainActivity workInfos from CONNECTION WORK. Size = ${it.size}")
+                if (it.isNotEmpty()) viewModel.handleBleConnectionWorkResult(it)
+            }*/
+
+        /*workManager.getWorkInfosForUniqueWorkLiveData(CHECK_SIGNAL_WORK)
+            .observe(this) {
+                if (it.isNotEmpty()) viewModel.handleCheckSignalWorkResult(it)
+            }*/
     }
 
     private fun startBleScan() {
@@ -167,20 +207,21 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         //unregisterReceiver(gattUpdateReceiver)
+        workManager.cancelAllWork()
         unregisterReceiver(scanBroadcastReceiver)
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        workManager.cancelAllWork()
-        unregisterReceiver(scanBroadcastReceiver)
+        //workManager.cancelAllWork()
+        //unregisterReceiver(scanBroadcastReceiver)
 
         Log.d(TAG, "On destroy")
     }
 
 
 
-    /*private fun makeGattUpdateIntentFilter(): IntentFilter? {
+    private fun makeGattUpdateIntentFilter(): IntentFilter? {
         return IntentFilter().apply {
             addAction(ACTION_GATT_CONNECTED)
             addAction(ACTION_GATT_DISCONNECTED)
@@ -193,20 +234,14 @@ class MainActivity : AppCompatActivity() {
             addAction(ACTION_MODEM_READY)
             addAction(ACTION_SERVICE_CONNECTED)
         }
-    }*/
+    }
 
-    /*private val gattUpdateReceiver: BroadcastReceiver = object : BroadcastReceiver() {
+    private val gattUpdateReceiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            when (intent.action) {
-                *//*ACTION_GATT_CONNECTED -> {
-                    isConnected = true
-                    updateConnectionState("Connected")
-                }
-                ACTION_GATT_DISCONNECTED -> {
-                    isConnected = false
-                    updateConnectionState("Disconnected")
-                }
-                ACTION_GATT_SERVICES_DISCOVERED -> {
+            viewModel.handleGattUpdateReceiverResult(intent)
+        }
+
+                /*ACTION_GATT_SERVICES_DISCOVERED -> {
                     // Show all the supported services and characteristics on the user interface.
                     isServiceDiscovered = true
                     //displayGattServices(bluetoothService?.getSupportedGattServices())
@@ -242,46 +277,14 @@ class MainActivity : AppCompatActivity() {
                 ACTION_MODEM_READY -> {
                     val isModemReady = intent.getBooleanExtra(MODEM_READY, false)
                     handleModemReady(isModemReady)
-                }*//*
+                }
                 ACTION_SERVICE_CONNECTED -> {
                     Log.d(TAG, " Service connection successful")
                     //bleService?.startScan()
                 }
-            }
-        }
-    }*/
+            }*/
+    }
 
-    /*private val scanServiceConnection: ServiceConnection = object : ServiceConnection {
-        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-            bleService = (service as BleService.LocalBinder).getService()
-            Log.d(TAG, "Service $bleService")
-            bleService?.let { bluetooth ->
-                // call functions on service to check connection and connect to devices
-                if (!bluetooth.initialize()) {
-                    Log.e(TAG, "Unable to initialize Bluetooth")
-                    finish()
-                }
-                // perform device connection
-                Log.d(TAG, "Service Connected $bleService")
-            }
-        }
-
-        override fun onServiceDisconnected(componentName: ComponentName) {
-            Log.d(TAG, "Service Disconnected $bleService")
-            bleService = null
-        }
-    }*/
-
-    /*private fun setScanServiceConnection() {
-        //serviceConnection = BleServiceConnection(this, deviceAddress)
-        scanServiceConnection.onScanServiceConnectionListener = object : ScanServiceConnection.OnScanServiceConnectionListener {
-            override fun setServiceToViewModel(service: ScanService?) {
-                viewModel.scanService = service
-            }
-        }
-        val scanServiceIntent = Intent(this, ScanService::class.java)
-        bindService(scanServiceIntent, scanServiceConnection, Context.BIND_AUTO_CREATE)
-    }*/
     private val scanBroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent) {
             Log.d(TAG, "onReceive scan broadcast Main Activity")
@@ -303,10 +306,11 @@ class MainActivity : AppCompatActivity() {
         registerReceiver(scanBroadcastReceiver, setScanWorkIntentFilter())
     }
 
+    // navigation menu
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             android.R.id.home -> {
-                findNavController(R.id.nav_host_fragment_activity_main).popBackStack()
+                navController.popBackStack()
                 viewModel.handleUiMode(CHAT_CONTACTS_MODE, bundleOf())
                 return true
             }
@@ -328,10 +332,14 @@ class MainActivity : AppCompatActivity() {
 
         //supportActionBar?.title = appState.title
         val title = binding.toolbar.getChildAt(0) as TextView
-        Log.d("MainActivity", "title of toolbar = ${title.text.toString()}")
+        Log.d("MainActivity", "title of toolbar _1 = ${title.text.toString()}")
         title.typeface = Typeface.createFromAsset(assets, "fonts/invasion.ttf")
         //setTitle(title)
         title.text = appState.title
+        Log.d("MainActivity", "title of toolbar _2 = ${title.text.toString()}")
+
+        changeConnectionIv(appState.isBleConnectedIcon)
+        changeIv(appState.signalLevel)
     }
 
     /*override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -356,29 +364,31 @@ class MainActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }*/
 
-    private fun changeIv() {
-        runBlocking {
-            launch {
-                delay(1000)
-
-                //val ivSignal = binding.toolbar.getChildAt(2) as ImageView
-                val drawableList = listOf(
-                    R.drawable.slevel_1_1,
-                    R.drawable.slevel_2_0,
-                    R.drawable.slevel_3_0,
-                    R.drawable.slevel_4_0,
-                    R.drawable.slevel_5_0
-                )
-                for (i in 0 until 5) {
-                    //ivSignal.background = getDrawable(drawableList[i])
-                    binding.toolbar.menu.findItem(R.id.ivSignal).setIcon(drawableList[i])
-                    Log.d("MainActivity", "Set drawable: $i")
-                    //renderUi()
-                    //setSupportActionBar(binding.toolbar)
-                    delay(1500)
-                }
+    private fun changeIv(sLevel: Int) {
+        runOnUiThread {
+            val signalIcon = when (sLevel) {
+                0 -> R.drawable.slevel_0_1
+                1 -> R.drawable.slevel_1_1
+                2 -> R.drawable.slevel_2_0
+                3 -> R.drawable.slevel_3_0
+                4 -> R.drawable.slevel_4_0
+                5 -> R.drawable.slevel_5_0
+                else -> throw java.lang.RuntimeException("Unreachable signal level")
             }
+            //binding.toolbar.menu.findItem(R.id.ivSignal).setIcon(signalIcon)
+            binding.toolbar.findViewById<ImageView>(R.id.iv_signal2).background =
+                ContextCompat.getDrawable(this, signalIcon)
+        }
+    }
 
+    private fun changeConnectionIv(isConnected: Boolean) {
+        runOnUiThread {
+            val isConnectedDrawable = if (isConnected) {
+                ContextCompat.getDrawable(this, R.drawable.connected_2)
+            } else {
+                ContextCompat.getDrawable(this, R.drawable.disconnected_2)
+            }
+            binding.toolbar.findViewById<ImageView>(R.id.ibtn_disconnected).background = isConnectedDrawable
         }
     }
 /*
@@ -444,14 +454,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun launchShowDevicesFragment(devicesSimple: List<DeviceSimple>) {
-        val alertDialog = DeviceListDialogFragment(devicesSimple).apply {
-            onDeviceItemClickListener = object : DeviceListDialogFragment.OnDeviceItemClickListener {
-                override fun onDeviceItemClick(position: Int) {
-                    viewModel.setConnection(position)
-                }
-            }
+        navController.navigate(
+            ChatContactsFragmentDirections.actionNavigationChatToDeviceListDialogFragment(devicesSimple.toTypedArray())
+        )
+    }
+
+    override fun onDeviceItemClick(position: Int) {
+        isDevicesListLocked = false
+        navController.popBackStack()
+        navController.navigate(R.id.connectShowFragment)
+        if (position > -1) {
+
+            viewModel.setConnection(position)
         }
-        alertDialog.show(this.supportFragmentManager.beginTransaction(), null)
     }
 
     private fun setScanWorkIntentFilter(): IntentFilter {
@@ -475,7 +490,6 @@ class MainActivity : AppCompatActivity() {
         const val SCANNING_DATA = "scanning_data"
 
         const val SCANNING_WORK = "scanning_work"
-        const val CONNECTING_WORK = "connecting_work"
         const val DEVICES_KEY = "devices"
 
         const val SCAN_INTENT_REQUEST_CODE = 1

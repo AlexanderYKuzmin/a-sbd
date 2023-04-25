@@ -12,12 +12,12 @@ import android.util.Log
 import com.example.a_sbd.ui.MainActivity.Companion.TAG
 import javax.inject.Inject
 
-class BleService /*@Inject constructor(
+class BleService @Inject constructor(
     private val bluetoothManager: BluetoothManager,
     private val bluetoothAdapter: BluetoothAdapter,
     private val bluetoothLeScanner: BluetoothLeScanner,
     private val settings: ScanSettings,
-)*/ : Service() {
+) : Service() {
 
     private val binder = LocalBinder()
 
@@ -29,13 +29,6 @@ class BleService /*@Inject constructor(
         return true
     }
 
-    fun startScan() {
-
-    }
-
-    fun stopScan() {
-
-    }
 
     fun connect(address: String): Boolean {
         return false

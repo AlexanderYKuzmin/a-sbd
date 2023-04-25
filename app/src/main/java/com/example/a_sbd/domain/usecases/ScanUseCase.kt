@@ -49,16 +49,4 @@ class ScanUseCase @Inject constructor (
 
         //WorkManager.getInstance(application).enqueue(scanRequest)
     }
-
-    @SuppressLint("MissingPermission")
-    fun startScan() {
-
-
-
-    }
-
-    @SuppressLint("MissingPermission")
-    fun stopScan() {
-
-    }
 }

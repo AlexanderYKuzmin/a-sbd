@@ -10,7 +10,6 @@ import android.os.Binder
 import android.os.IBinder
 import android.util.Log
 import com.example.a_sbd.ASBDApp
-import com.example.a_sbd.data.bluetooth.BleScanCallback
 import com.example.a_sbd.domain.model.DeviceSimple
 import com.example.a_sbd.ui.MainActivity.Companion.ACTION_DEVICES_FOUND
 import com.example.a_sbd.ui.MainActivity.Companion.DEVICES_KEY

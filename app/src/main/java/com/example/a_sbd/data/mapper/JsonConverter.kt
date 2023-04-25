@@ -10,7 +10,7 @@ class JsonConverter @Inject constructor(){
 
     private val gson = Gson()
 
-    fun toJson(obj: Any): String {
+    fun toJson(obj: Any?): String {
         return gson.toJson(obj)
     }
 

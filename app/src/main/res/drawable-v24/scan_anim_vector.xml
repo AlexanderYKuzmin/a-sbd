@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-vector
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/graball_6">
+
+    <target
+        android:animation="@animator/scanning_anim_one"
+        android:name="one"/>
+    <target
+        android:animation="@animator/scanning_anim_two"
+        android:name="two"/>
+    <target
+        android:animation="@animator/scanning_anim_three"
+        android:name="three"/>
+    <target
+        android:animation="@animator/scanning_anim_four"
+        android:name="four"/>
+    <target
+        android:animation="@animator/scanning_anim_five"
+        android:name="five"/>
+
+</animated-vector>

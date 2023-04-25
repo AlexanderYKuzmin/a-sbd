@@ -13,6 +13,10 @@
             android:id="@+id/action_navigation_chat_to_single_chat"
             app:destination="@id/single_chat"
             app:popUpTo="@id/navigation_chat" />
+        <action
+            android:id="@+id/action_navigation_chat_to_deviceListDialogFragment"
+            app:destination="@id/deviceListDialogFragment"
+            app:popUpTo="@id/navigation_chat" />
     </fragment>
 
     <fragment
@@ -36,4 +40,23 @@
             android:name="id"
             app:argType="long" />
     </fragment>
+    <fragment
+        android:label="Устройства"
+        android:id="@+id/deviceListDialogFragment"
+        android:name="com.example.a_sbd.ui.DeviceListDialogFragment"
+         >
+
+        <argument
+            android:name="devicesSimple"
+            app:argType="com.example.a_sbd.domain.model.DeviceSimple[]" />
+    </fragment>
+    <fragment
+        android:label="Сканирование"
+        android:id="@+id/scanningShowFragment"
+        android:name="com.example.a_sbd.ui.ScanningShowFragment"
+         />
+    <fragment
+        android:id="@+id/connectShowFragment"
+        android:name="com.example.a_sbd.ui.ConnectShowFragment"
+        />
 </navigation>

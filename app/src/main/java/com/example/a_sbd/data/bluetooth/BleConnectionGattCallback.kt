@@ -10,6 +10,7 @@ import android.util.Log
 import com.example.a_sbd.data.workers.BleConnectionWorker
 import com.example.a_sbd.ui.MainActivity.Companion.TAG
 import java.util.*
+import kotlin.concurrent.thread
 
 class BleConnectionGattCallback(
     //private val onGattCallbackListener: BleConnectionWorker.OnGattCallbackListener
@@ -26,6 +27,8 @@ class BleConnectionGattCallback(
             //broadcastUpdate(ACTION_GATT_CONNECTED)
             //onGattCallbackListener?.onConnectionEstablished(true)
             Log.d(TAG, "Connected")
+            gatt?.requestMtu(128)
+            Thread.sleep(1000)
             gatt?.discoverServices()
         } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
             // disconnected from the GATT Server
@@ -36,7 +39,9 @@ class BleConnectionGattCallback(
 
     }
     override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
+        Log.d("Gatt Callback", "On services discovered")
         if (status == BluetoothGatt.GATT_SUCCESS) {
+            Log.d("Gatt Callback", "status success")
             val characteristic = gatt?.getService(UNKNOWN_SERVICE)?.getCharacteristic(UNKNOWN_CHARACTERISTIC)
             onGattCallbackListener?.onConnectionEstablished(true, characteristic)
         } else {
@@ -62,6 +67,7 @@ class BleConnectionGattCallback(
     ) {
         if (status == BluetoothGatt.GATT_SUCCESS) {
             val charaValue = String(characteristic.value)
+            Log.d("Gatt Callback", "Write characteristic")
             /*if (charaValue.startsWith("AT+SBDWT")) {
                 val charaValueSubstring = charaValue.substring(9)
                 broadcastUpdate(ACTION_DATA_WRITTEN, charaValueSubstring, OUTGOING)
@@ -83,28 +89,23 @@ class BleConnectionGattCallback(
         characteristic: BluetoothGattCharacteristic,
         value: ByteArray
     ) {
-        //broadcastUpdate(ACTION_DATA_AVAILABLE, value)
-        //checkChangedCharacteristic(characteristic)
+        onGattCallbackListener?.onCharacteristicChanged(characteristic)
     }
 
     @Deprecated("Deprecated in Java")
     override fun onCharacteristicChanged(
         gatt: BluetoothGatt?,
-        characteristic: BluetoothGattCharacteristic?
+        characteristic: BluetoothGattCharacteristic
     ) {
-        //broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic!!.value)
-        //checkChangedCharacteristic(characteristic!!)
+        onGattCallbackListener?.onCharacteristicChanged(characteristic)
     }
-
-    /*private fun broadcastUpdate(action: String) {
-        val intent = Intent(action)
-        sendBroadcast(intent)
-    }*/
 
     interface OnGattCallbackListener {
         fun onConnectionEstablished(isConnectionEstablished: Boolean,  characteristic: BluetoothGattCharacteristic?)
 
         fun onServicesDisCovered(characteristic: BluetoothGattCharacteristic)
+
+        fun onCharacteristicChanged(characteristic: BluetoothGattCharacteristic)
     }
 
     companion object {

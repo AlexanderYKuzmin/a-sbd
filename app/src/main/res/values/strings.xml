@@ -14,4 +14,6 @@
     <!-- Workers -->
     <string name="ble_scan_work">BleScan</string>
     <string name="ble_connect_work">BleConnect</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>
