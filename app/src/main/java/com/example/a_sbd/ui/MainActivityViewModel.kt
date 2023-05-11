@@ -2,24 +2,28 @@ package com.example.a_sbd.ui
 
 import android.annotation.SuppressLint
 import android.app.Application
+import android.bluetooth.BluetoothAdapter
 import android.bluetooth.le.ScanResult
-import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.work.WorkInfo
 import com.example.a_sbd.R
+import com.example.a_sbd.data.commands.*
 import com.example.a_sbd.data.mapper.JsonConverter
 import com.example.a_sbd.data.mapper.ModemResponseMapper
 import com.example.a_sbd.domain.model.DeviceSimple
+import com.example.a_sbd.domain.model.Message
 import com.example.a_sbd.domain.model.WorkBleConnectionResponse
-import com.example.a_sbd.domain.usecases.CheckSignalLevelUseCase
-import com.example.a_sbd.domain.usecases.ScanUseCase
-import com.example.a_sbd.domain.usecases.SetBleConnectionUseCase
-import com.example.a_sbd.services.BleService
+import com.example.a_sbd.domain.usecases.*
+import com.example.a_sbd.services.BleService.Companion.MESSAGE_ID
+import com.example.a_sbd.services.BleService.Companion.MO_STATUS
+import com.example.a_sbd.services.BleService.Companion.MT_STATUS
 import com.example.a_sbd.ui.MainActivity.Companion.TAG
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 class MainActivityViewModel @Inject constructor(
@@ -27,8 +31,13 @@ class MainActivityViewModel @Inject constructor(
     private val scanUseCase: ScanUseCase,
     private val setBleConnectionUseCase: SetBleConnectionUseCase,
     private val checkSignalLevelUseCase: CheckSignalLevelUseCase,
+    private val getMessageUseCase: GetMessageUseCase,
+    private val getAllMessagesUnsentUseCase: GetAllMessagesUnsentUseCase,
+    private val updateMessageUseCase: UpdateMessageUseCase,
+    private val updateMessageByIdToDeparted: UpdateMessageByIdToDeparted,
     private val jsonConverter: JsonConverter,
-    private val modemResponseMapper: ModemResponseMapper
+    private val modemResponseMapper: ModemResponseMapper,
+    private val bluetoothAdapter: BluetoothAdapter
     //private val bluetoothLeScanner: BluetoothLeScanner,
     //private val scanSettings: ScanSettings,
 ) : ViewModel() {
@@ -46,7 +55,42 @@ class MainActivityViewModel @Inject constructor(
     val devicesSimple: LiveData<List<DeviceSimple>>
         get() = _devicesSimple
 
+    private val _deviceAddressConnected = MutableLiveData<String?>()
+    val deviceAddressConnected: LiveData<String?>
+        get() = _deviceAddressConnected
+
+
+    private val _startSession = MutableLiveData<Unit>() // todo maybe i need Int to have range for command
+    val startSession: LiveData<Unit>
+        get() = _startSession
+
+    private val _startReadBuffer = MutableLiveData<Unit>()
+    val startReadBuffer: LiveData<Unit>
+        get() = _startReadBuffer
+
+    private val _startWriteBuffer = MutableLiveData<Message>()
+    val startWriteBuffer: LiveData<Message>
+        get() = _startWriteBuffer
+
+    private val _setSbdRing = MutableLiveData<Unit>()
+    val setSbdRing: LiveData<Unit>
+        get() = _setSbdRing
+
+    private val _resetMessageIdService = MutableLiveData<Unit>()
+    val resetMessageIdService: LiveData<Unit>
+        get() = _resetMessageIdService
+
     //private val workManager = WorkManager.getInstance(context)
+
+    private var _isMessageDeparted = true
+
+    lateinit var messagesUnsent: LiveData<List<Message>>
+
+    init {
+        viewModelScope.launch {
+            messagesUnsent = getAllMessagesUnsentUseCase()
+        }
+    }
 
     fun handleUiMode(uiMode: Int, bundle: Bundle) {
         when(uiMode) {
@@ -68,8 +112,9 @@ class MainActivityViewModel @Inject constructor(
         }
     }
 
-    private fun updateAppStateConnected() {
-        if (_isBleConnected) {
+    fun updateAppStateConnected(isConnected: Boolean) {
+        _isBleConnected = isConnected
+        if (isBleConnected) {
             _appState.value = appState.value?.copy(
                 isBleConnectedIcon = true,
                 title = context.getString(R.string.app_name),
@@ -92,24 +137,25 @@ class MainActivityViewModel @Inject constructor(
         )
     }
 
-    private fun setSignalQualityIndicator(sLevel: Int) {
+    fun setSignalQualityIndicator(sLevel: Int) {
         _appState.value = appState.value?.copy(
             signalLevel = sLevel
         )
     }
 
-    fun handleGattUpdateReceiverResult(intent: Intent) {
+    /*fun handleGattUpdateReceiverResult(intent: Intent) {
         when (intent.action) {
             BleService.ACTION_GATT_CONNECTED -> {
-                _isBleConnected = true
+                _isBleConnected = intent.getBooleanExtra(IS_CONNECTED, false)
                 updateAppStateConnected()
+                checkSignalLevel()
             }
             BleService.ACTION_GATT_DISCONNECTED -> {
                 _isBleConnected = false
                 updateAppStateConnected()
             }
         }
-    }
+    }*/
 
    /* fun handleBleConnectionWorkResult(workInfos: MutableList<WorkInfo>) {
         Log.d(TAG, "Handle connection work result. workInfos size ${workInfos.size}")
@@ -168,20 +214,90 @@ class MainActivityViewModel @Inject constructor(
             results?.map { scanResult -> DeviceSimple(scanResult.device.name, scanResult.device.address) }
     }
 
+    fun handleSignalQuality(signal: Int) {
+        if (signal > 2) _startSession.value = Unit
+        else Log.d(TAG, "Signal is too low $signal") // todo make a notice to screen
+    }
+
+    private var attemptCount = 0
+    fun handleDataAvailable(jsonStringSessionData: String) {  // todo I need ID of message departed
+        val sessionData = jsonConverter.fromJsonToMapSessionParameters(jsonStringSessionData)
+        if (
+            sessionData[MO_STATUS] != MO_MESSAGE_TRANSFER_SUCCESSFUL &&
+            sessionData[MO_STATUS] != MO_MESSAGE_TRANSFER_SUCCESSFUL_BUT_LOCATION_NO &&
+            sessionData[MO_STATUS] != MO_MESSAGE_TRANSFER_SUCCESSFUL_BUT_MT_TOO_BIG
+        ) {
+            _isMessageDeparted = false
+        } else {
+            _resetMessageIdService.value = Unit
+            viewModelScope.launch { sessionData[MESSAGE_ID]?.let { updateMessageByIdToDeparted(it.toLong()) } }
+        }
+
+        when {
+            //sessionData[MO_STATUS] == MO_MESSAGE_TRANSFER_SUCCESSFUL -> {}
+            sessionData[MT_STATUS] == MT_MESSAGE_RECEIVE_SUCCESSFUL -> {
+                _startReadBuffer.value = Unit
+            }
+            sessionData[MT_STATUS] == MT_MESSAGE_ERROR -> {
+                if (attemptCount < 5) {
+                    attemptCount++
+                    Log.d(TAG, "MT message error: ${sessionData[MT_STATUS]}")
+                    _startSession.value = Unit
+                }
+            }
+            sessionData[MT_STATUS] == MT_NO_SBD_MESSAGE_TO_RECEIVE -> {
+                Log.d(TAG, "MT message no to receive: ${sessionData[MT_STATUS]}")
+                if (!_isMessageDeparted) { // todo check it out. Create the deque or something
+                    if (attemptCount < 5) _startSession.value = Unit
+                }
+                else _setSbdRing.value = Unit
+            }
+        }
+    }
+
+    fun handleMessageWritten(id: Long) {
+        Log.d(TAG, "Written ID : $id")
+        /*viewModelScope.launch {
+            updateMessageByIdToDeparted(id)
+        }*/
+
+        _startSession.value = Unit
+    }
+
     fun setConnection(devicePosition: Int) {
         Log.d(TAG, "Device is chosen")
         val devices = devicesSimple.value
             ?: throw java.lang.RuntimeException("List of devices can not be null whilst connection is being established")
-        setBleConnectionUseCase(devices[devicePosition].address!!)
+
+        _deviceAddressConnected.value = devices[devicePosition].address!!
     }
 
     fun removeConnection() {
-        setBleConnectionUseCase(null)
+        _deviceAddressConnected.value = null
+    }
+
+    fun sendMessageByBle(message: Message) {
+        _startWriteBuffer.value = message
+        /*viewModelScope.launch {
+            getMessageUseCase(id)?.let {
+                _textToSendByBle.value = it.text
+            }
+        }*/
+        /*var delayed: Message? = null //todo check everything
+        viewModelScope.launch {
+            val job: Job = launch {
+                delayed = getMessageDelayed.invoke()
+                Log.d(TAG, "Delayed message: $delayed")
+            }
+            job.join()
+            _startWriteBuffer.value = delayed!!
+        }*/
+
     }
 
     fun checkSignalLevel() {
         Log.d(TAG, "Check signal level")
-        checkSignalLevelUseCase()
+        //checkSignalLevelUseCase()
     }
 
     private fun getDataFromWorkInfos(workInfos: MutableList<WorkInfo>): WorkBleConnectionResponse? {
@@ -193,6 +309,11 @@ class MainActivityViewModel @Inject constructor(
             )
         } else null
     }
+
+    private fun checkForDelayedMessages() {
+
+    }
+
 
     companion object {
         private const val LOG_TAG = "MainViewModel"
@@ -209,6 +330,8 @@ class MainActivityViewModel @Inject constructor(
         const val CHECK_SIGNAL_WORK = "check_signal_work_name"
 
         const val SIGNAL_LEVEL_ZERO = 0
+        const val WRONG_ID = -1L
+
     }
 
     data class AppState(

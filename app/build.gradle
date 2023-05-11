@@ -56,6 +56,7 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.5.1'
     implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.5.1'
+    implementation 'androidx.lifecycle:lifecycle-service:2.5.1'
 
     implementation 'androidx.navigation:navigation-fragment-ktx:2.5.3'
     implementation 'androidx.navigation:navigation-ui-ktx:2.5.3'
@@ -74,7 +75,7 @@ dependencies {
     kapt "com.squareup.inject:assisted-inject-processor-dagger2:$dagger_assist_version"
 
     //room
-    def room_version = "2.4.3"
+    def room_version = "2.5.0"
 
     implementation "androidx.room:room-runtime:$room_version"
 

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-vector
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/bear_constilation_2"
+    >
+    <target
+        android:animation="@animator/connect_star_1"
+        android:name="star_one"/>
+    <target
+        android:animation="@animator/connect_star_2"
+        android:name="star_two"/>
+    <target
+        android:animation="@animator/connect_star_3"
+        android:name="star_three"/>
+    <target
+        android:animation="@animator/connect_star_4"
+        android:name="star_four"/>
+    <target
+        android:animation="@animator/connect_star_5"
+        android:name="star_five"/>
+    <target
+        android:animation="@animator/connect_star_6"
+        android:name="star_six"/>
+    <target
+        android:animation="@animator/connect_star_7"
+        android:name="star_seven"/>
+
+</animated-vector>

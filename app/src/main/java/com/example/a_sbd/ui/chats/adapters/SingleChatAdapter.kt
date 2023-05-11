@@ -1,20 +1,22 @@
 package com.example.a_sbd.ui.chats.adapters
 
+import android.content.Context
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.ListAdapter
-import androidx.viewbinding.ViewBinding
+import com.example.a_sbd.R
 import com.example.a_sbd.databinding.ItemSingleChatDefaultInBinding
 import com.example.a_sbd.databinding.ItemSingleChatDefaultOutBinding
 import com.example.a_sbd.databinding.ItemSingleChatDividerBinding
 import com.example.a_sbd.databinding.ItemSingleChatInBinding
 import com.example.a_sbd.databinding.ItemSingleChatOutBinding
 import com.example.a_sbd.domain.model.Message
-import com.example.a_sbd.domain.model.MessageType
 import com.example.a_sbd.domain.model.MessageType.*
 import com.example.a_sbd.extensions.formatToTime
 
-class SingleChatAdapter(): ListAdapter<Message, SingleChatViewHolder>(SingleChatDiffCallback)  {
+class SingleChatAdapter(
+    private val context: Context
+): ListAdapter<Message, SingleChatViewHolder>(SingleChatDiffCallback)  {
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SingleChatViewHolder {
         val binding = when(viewType) {
 
@@ -49,21 +51,31 @@ class SingleChatAdapter(): ListAdapter<Message, SingleChatViewHolder>(SingleChat
 
     override fun onBindViewHolder(holder: SingleChatViewHolder, position: Int) {
         val currentMessage = getItem(position)
-        val beforeMessage = getItem(position - 1)
+        val beforeMessage = if (position > 0) getItem(position - 1) else null
         with(holder.binding) {
             when (getItemViewType(position)) {
                 ITEM_START_IN -> {
                     this as ItemSingleChatInBinding
+                    tvMessageTextStartIn.text = currentMessage.text
+                    tvMessageTimeStartIn.text = currentMessage.messageDate.formatToTime()
                 }
-                ITEM_START_OUT -> holder.binding as ItemSingleChatOutBinding
+                ITEM_START_OUT -> {
+                    this as ItemSingleChatOutBinding
+                    tvMessageTextStartOut.text = currentMessage.text
+                    tvMessageTimeStartOut.text = currentMessage.messageDate.formatToTime()
+                }
                 ITEM_DEFAULT_IN -> {
                     this as ItemSingleChatDefaultInBinding
                     tvMessageTextDefaultIn.text = currentMessage.text
                     tvMessageTimeDefaultIn.text = currentMessage.messageDate.formatToTime()
                         //root.background =
                 }
-                ITEM_DEFAULT_OUT -> holder.binding as ItemSingleChatDefaultOutBinding
-                else -> holder.binding as ItemSingleChatDividerBinding
+                ITEM_DEFAULT_OUT -> {
+                    this as ItemSingleChatDefaultOutBinding
+                    tvMessageTextDefaultOut.text = currentMessage.text
+                    tvMessageTimeDefaultOut.text = currentMessage.messageDate.formatToTime()
+                }
+                else -> this as ItemSingleChatDividerBinding
             }
         }
 
@@ -74,8 +86,8 @@ class SingleChatAdapter(): ListAdapter<Message, SingleChatViewHolder>(SingleChat
             EMPTY -> ITEM_DIVIDER
             START_IN -> ITEM_START_IN
             START_OUT -> ITEM_START_OUT
-            DEFAULT_IN -> ITEM_DEFAULT_IN
-            DEFAULT_OUT -> ITEM_DEFAULT_OUT
+            NORMAL_IN -> ITEM_DEFAULT_IN
+            NORMAL_OUT -> ITEM_DEFAULT_OUT
         }
     }
 

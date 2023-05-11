@@ -7,6 +7,7 @@ data class ChatContact(
     val firstName: String,
     val lastName: String,
     val phoneNumber: String,
-    val lastMessage: String = "",
-    val lastMessageDate: Date = Date()
+    //val lastMessage: String = "",
+    //val lastMessageDate: Date = Date()
+    val messages: List<Message>
 )

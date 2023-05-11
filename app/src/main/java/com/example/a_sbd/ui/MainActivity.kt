@@ -1,17 +1,16 @@
 package com.example.a_sbd.ui
 
-import android.bluetooth.BluetoothDevice
-import android.bluetooth.BluetoothGattCharacteristic
+import android.bluetooth.BluetoothAdapter
 import android.bluetooth.le.BluetoothLeScanner
 import android.bluetooth.le.ScanResult
-import android.content.BroadcastReceiver
-import android.content.ContentValues.TAG
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
+import android.content.*
 import android.graphics.Typeface
 import android.os.Build
+import android.os.Build.VERSION
+import android.os.Build.VERSION_CODES
 import android.os.Bundle
+import android.os.IBinder
+import android.os.Parcelable
 import android.util.Log
 import android.view.*
 import android.widget.ImageView
@@ -29,12 +28,14 @@ import androidx.navigation.ui.setupWithNavController
 import androidx.work.WorkManager
 import com.example.a_sbd.ASBDApp
 import com.example.a_sbd.R
+import com.example.a_sbd.data.mapper.JsonConverter
 import com.example.a_sbd.databinding.ActivityMainBinding
-import com.example.a_sbd.di.ASBDComponent
 import com.example.a_sbd.domain.model.DeviceSimple
+import com.example.a_sbd.domain.model.Message
 import com.example.a_sbd.extensions.dpToIntPx
 import com.example.a_sbd.extensions.hasRequiredRuntimePermissions
 import com.example.a_sbd.extensions.requestRelevantRuntimePermissions
+import com.example.a_sbd.services.BleService
 import com.example.a_sbd.services.BleService.Companion.ACTION_DATA_AVAILABLE
 import com.example.a_sbd.services.BleService.Companion.ACTION_DATA_READ
 import com.example.a_sbd.services.BleService.Companion.ACTION_DATA_WRITTEN
@@ -45,19 +46,19 @@ import com.example.a_sbd.services.BleService.Companion.ACTION_MODEM_READY
 import com.example.a_sbd.services.BleService.Companion.ACTION_SERVICE_CONNECTED
 import com.example.a_sbd.services.BleService.Companion.ACTION_SERVICE_IDLE
 import com.example.a_sbd.services.BleService.Companion.ACTION_SIGNAL_LEVEL
-import com.example.a_sbd.ui.MainActivityViewModel.Companion.CHECK_SIGNAL_WORK
-import com.example.a_sbd.ui.MainActivityViewModel.Companion.CONNECTION_TAG
-import com.example.a_sbd.ui.MainActivityViewModel.Companion.CONNECTION_WORK
+import com.example.a_sbd.ui.MainActivityViewModel.Companion.WRONG_ID
 import com.example.a_sbd.ui.chats.ChatContactsFragmentDirections
+import com.example.a_sbd.ui.chats.SingleChatFragment
 //import com.example.a_sbd.services.BleService
 //import com.example.a_sbd.services.ScanServiceConnection
 //import com.example.a_sbd.services.ScanService
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
-class MainActivity : AppCompatActivity(), DeviceListDialogFragment.OnDeviceItemClickListener {
+class MainActivity :
+    AppCompatActivity(),
+    DeviceListDialogFragment.OnDeviceItemClickListener,
+    SingleChatFragment.OnMessageSendListener
+{
 
     private lateinit var binding: ActivityMainBinding
 
@@ -68,14 +69,8 @@ class MainActivity : AppCompatActivity(), DeviceListDialogFragment.OnDeviceItemC
     @Inject
     lateinit var viewModelFactory: ViewModelFactory
 
-    /*@Inject
-    lateinit var appWorkerFactory: AppWorkerFactory*/
-
-    /*@Inject
-    lateinit var scanServiceConnection: ScanServiceConnection*/
-
-    //private var scanService : ScanService? = null
-    private var characteristic: BluetoothGattCharacteristic? = null
+    @Inject
+    lateinit var bluetoothAdapter: BluetoothAdapter
 
     //@Inject
     //lateinit var scanBroadcastReceiver: ScanBroadcastReceiver
@@ -86,8 +81,11 @@ class MainActivity : AppCompatActivity(), DeviceListDialogFragment.OnDeviceItemC
 
     private val workManager = WorkManager.getInstance(this)
 
-    private val deviceAddress: String? = null
-    private lateinit var ivSignal: View
+    private var bleService: BleService? = null
+
+   /* private val deviceAddress: String? = null
+    private lateinit var ivSignal: View*/
+
 
     private var isDevicesListLocked = false
 
@@ -108,12 +106,14 @@ class MainActivity : AppCompatActivity(), DeviceListDialogFragment.OnDeviceItemC
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        /*val gattServiceIntent = Intent(this, BleService::class.java)
-        bindService(gattServiceIntent, bleServiceConnection, Context.BIND_AUTO_CREATE)*/
+        val gattServiceIntent = Intent(this, BleService::class.java)
+        bindService(gattServiceIntent, bleServiceConnection, Context.BIND_AUTO_CREATE)
 
         //setScanServiceConnection()
 
         registerScanReceiver()
+
+        registerGattUpdateReceiver()
 
         supportFragmentManager
             .setFragmentResultListener("single_chat_started", this)
@@ -157,10 +157,9 @@ class MainActivity : AppCompatActivity(), DeviceListDialogFragment.OnDeviceItemC
         }
 
         viewModel.appState.observe(this) {
-            if (stateConnected  != it.isBleConnectedIcon) {
-                navController.popBackStack(R.id.connectShowFragment, true)
+            if (stateConnected  != it.isBleConnectedIcon) {   // check it out , maybe remove condition
+                navController.popBackStack(R.id.deviceListDialogFragment, true)
             }
-
             renderUi(it)
         }
 
@@ -172,18 +171,40 @@ class MainActivity : AppCompatActivity(), DeviceListDialogFragment.OnDeviceItemC
             }
         }
 
+        viewModel.deviceAddressConnected.observe(this) {
+            //launchShowConnectFragment()
+            if (it != null) {
+                bleService?.connect(it)
+            }
+            else {
+                bleService?.disconnect()
+                viewModel.updateAppStateConnected(false)
+            }
+        }
+
+        viewModel.startSession.observe(this) {
+            bleService?.openSession()
+        }
+
+        viewModel.startWriteBuffer.observe(this) {
+            Log.d(TAG, "Activity. Starting to write message")
+            bleService?.writeToBuffer(it.text, it.id)
+        }
+
+        viewModel.messagesUnsent.observe(this) { list ->
+            if (!list.isNullOrEmpty()) {
+                with(list.first()) {
+                //todo if service idle
+                    bleService?.writeToBuffer(text, id)
+                }
+            }
+        }
+
+        viewModel.resetMessageIdService.observe(this) {
+            bleService?.resetMessageId()
+        }
 
         workManager.pruneWork()
-        /*workManager.getWorkInfosForUniqueWorkLiveData(CONNECTION_WORK)
-            .observe(this) {
-                Log.d(TAG, "MainActivity workInfos from CONNECTION WORK. Size = ${it.size}")
-                if (it.isNotEmpty()) viewModel.handleBleConnectionWorkResult(it)
-            }*/
-
-        /*workManager.getWorkInfosForUniqueWorkLiveData(CHECK_SIGNAL_WORK)
-            .observe(this) {
-                if (it.isNotEmpty()) viewModel.handleCheckSignalWorkResult(it)
-            }*/
     }
 
     private fun startBleScan() {
@@ -193,15 +214,6 @@ class MainActivity : AppCompatActivity(), DeviceListDialogFragment.OnDeviceItemC
         } else {
             throw java.lang.RuntimeException("No permissions")
         }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        //registerReceiver(gattUpdateReceiver, makeGattUpdateIntentFilter())
-        /*if (bleService != null) {
-            val result = bleService!!.connect(deviceAddress)
-            Log.d(TAG, "Connect request result=$result")
-        }*/
     }
 
     override fun onPause() {
@@ -219,9 +231,35 @@ class MainActivity : AppCompatActivity(), DeviceListDialogFragment.OnDeviceItemC
         Log.d(TAG, "On destroy")
     }
 
+    override fun onBackPressed() {
+        when (navController.currentDestination?.id) {
+            R.id.scanningShowFragment -> {
+                viewModel.stopScan()
+            }
+            R.id.connectShowFragment -> {
 
+            }
+        }
+        super.onBackPressed()
+    }
 
-    private fun makeGattUpdateIntentFilter(): IntentFilter? {
+    private val bleServiceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            bleService = (service as BleService.LocalBinder).getService()
+            Log.d(TAG, "Ble service connected: $bleService")
+            bleService?.let {
+                if (!it.initialize(bluetoothAdapter)) {
+                    throw java.lang.RuntimeException("Unable to initialize Bluetooth")
+                }
+            }
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            bleService = null
+        }
+    }
+
+    private fun createGattUpdateIntentFilter(): IntentFilter? {
         return IntentFilter().apply {
             addAction(ACTION_GATT_CONNECTED)
             addAction(ACTION_GATT_DISCONNECTED)
@@ -238,51 +276,40 @@ class MainActivity : AppCompatActivity(), DeviceListDialogFragment.OnDeviceItemC
 
     private val gattUpdateReceiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            viewModel.handleGattUpdateReceiverResult(intent)
-        }
-
-                /*ACTION_GATT_SERVICES_DISCOVERED -> {
-                    // Show all the supported services and characteristics on the user interface.
-                    isServiceDiscovered = true
-                    //displayGattServices(bluetoothService?.getSupportedGattServices())
-                    characteristic = bleService?.getSupportedGattCharacteristic()
-
-                    bleService?.setCharacteristicNotification(characteristic!!, true)
-                    Thread.sleep(1000)
-
-                    Log.d(TAG, "Receiver GATT_SERVICES_DISCOVERED. Write characteristic AT.")
-                    bleService?.writeCharacteristic(characteristic!!, CHECK_MODEM)
+            Log.d(TAG, "Broadcast receive")
+            when (intent.action) {
+                ACTION_GATT_CONNECTED -> {
+                    //_isBleConnected = intent.getBooleanExtra(BleService.IS_CONNECTED, false)
+                    viewModel.updateAppStateConnected(true)
+                    bleService?.checkSignalLevel()
                 }
-                ACTION_DATA_READ -> {
-                    Log.d(TAG, "Receiver ACTION_DATA_READ. Display message.")
-                    displayMessage(intent.getStringExtra(EXTRA_DATA))
-                }
-                ACTION_DATA_WRITTEN -> {
-                    Log.d(TAG, "Receiver ACTION_DATA_WRITTEN. ")
-                    displayMessage(intent.getStringExtra(EXTRA_DATA))
-                }
-                ACTION_DATA_AVAILABLE -> {
-                    Log.d(TAG, "Receiver ACTION_DATA_AVAILABLE. Data have changed")
-                    val text = intent.getStringExtra(EXTRA_DATA)
-
-                    displayMessage(text)
+                ACTION_GATT_DISCONNECTED -> {
+                    //TODO
                 }
                 ACTION_SIGNAL_LEVEL -> {
-                    val level = intent.getIntExtra(SIGNAL_DATA, -1)
-                    Log.d(TAG, "Receiver ACTION_SIGNAL_DATA. Signal level: $level")
+                    val signal = intent.getIntExtra(ACTION_SIGNAL_LEVEL, 0)
+                    viewModel.setSignalQualityIndicator(signal)
+                    viewModel.handleSignalQuality(signal)
                 }
-                ACTION_SERVICE_IDLE -> {
-                    isServiceIdle = intent.getBooleanExtra(SERVICE_IDLE, false)
+                ACTION_DATA_AVAILABLE -> {
+                    val jsonStringSessionData = if (VERSION.SDK_INT >= VERSION_CODES.TIRAMISU) {
+                        intent.getSerializableExtra(ACTION_DATA_AVAILABLE, String::class.java)
+                    } else {
+                        intent.getSerializableExtra(ACTION_DATA_AVAILABLE) as String
+                    }
+                    viewModel.handleDataAvailable(jsonStringSessionData!!)
+                    Log.d(TAG, "Session parameters from broadcast: ${jsonStringSessionData}")
                 }
-                ACTION_MODEM_READY -> {
-                    val isModemReady = intent.getBooleanExtra(MODEM_READY, false)
-                    handleModemReady(isModemReady)
+                ACTION_DATA_WRITTEN -> {
+                    val id = intent.getLongExtra(ACTION_DATA_WRITTEN, -1)
+                    if (id != WRONG_ID) viewModel.handleMessageWritten(id)
+                    else throw RuntimeException("Wrong id to update message.")
                 }
-                ACTION_SERVICE_CONNECTED -> {
-                    Log.d(TAG, " Service connection successful")
-                    //bleService?.startScan()
-                }
-            }*/
+            }
+        }
+    }
+    private fun registerGattUpdateReceiver() {
+        registerReceiver(gattUpdateReceiver, createGattUpdateIntentFilter())
     }
 
     private val scanBroadcastReceiver = object : BroadcastReceiver() {
@@ -459,14 +486,28 @@ class MainActivity : AppCompatActivity(), DeviceListDialogFragment.OnDeviceItemC
         )
     }
 
+    private fun launchShowConnectFragment() {
+        //navController.navigate(R.id.connectShowFragment)
+        navController.navigate(R.id.connectShowFragment, )
+    }
+
+    // Listen click in device list
     override fun onDeviceItemClick(position: Int) {
         isDevicesListLocked = false
-        navController.popBackStack()
-        navController.navigate(R.id.connectShowFragment)
-        if (position > -1) {
+        launchShowConnectFragment()
 
+        if (position > -1) {
+            Log.d(TAG, "bleService in MainActivity: $bleService")
             viewModel.setConnection(position)
+        } else {
+            navController.popBackStack(R.id.navigation_chat, false)
         }
+    }
+
+    //Listen to message send action
+    override fun onMessageSend(message: Message) {
+        //viewModel.sendMessageByBle(message) // Мне не надо спецмально отправлять одно сообщение. Отправляем из базы по изменению live data базы
+        Log.d(TAG, "View model sending message at the moment")
     }
 
     private fun setScanWorkIntentFilter(): IntentFilter {

@@ -1,0 +1,24 @@
+--
+-- File generated with SQLiteStudio v3.4.4 on Сб апр 29 14:19:53 2023
+--
+-- Text encoding used: UTF-8
+--
+PRAGMA foreign_keys = off;
+BEGIN TRANSACTION;
+
+-- Table: contacts
+CREATE TABLE IF NOT EXISTS contacts (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, first_name TEXT (16), last_name TEXT (16), phone TEXT (12) NOT NULL CONSTRAINT phone_uq UNIQUE);
+INSERT INTO contacts (id, first_name, last_name, phone) VALUES (1, 'Александр', 'Чухванцев', '+79091000303');
+INSERT INTO contacts (id, first_name, last_name, phone) VALUES (2, 'Владимир', 'Усимов', '+79221000202');
+INSERT INTO contacts (id, first_name, last_name, phone) VALUES (3, 'Антон', 'Никифоров', '+79121000101');
+
+-- Table: messages
+CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, text TEXT (128), type TEXT (10) NOT NULL, date TEXT (19) NOT NULL, contact_id INTEGER REFERENCES contacts (id) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL);
+INSERT INTO messages (id, text, type, date, contact_id) VALUES (1, 'Hello, whats wrong?', 'start_in', '25.12.2022 13:15:12', 3);
+INSERT INTO messages (id, text, type, date, contact_id) VALUES (2, 'Hi, what do you mean?', 'start_out', '25.12.2022 13:16:12', 3);
+INSERT INTO messages (id, text, type, date, contact_id) VALUES (3, 'Yellow leaves are fallen...', 'start_in', '25.12.2022 14:15:12', 3);
+INSERT INTO messages (id, text, type, date, contact_id) VALUES (4, 'Wow, wow, wow!!!', 'start_in', '30.12.2022 20:00:00', 1);
+INSERT INTO messages (id, text, type, date, contact_id) VALUES (5, 'Yeah! I got it!!', 'start_in', '30.12.2022 21:20:12', 2);
+
+COMMIT TRANSACTION;
+PRAGMA foreign_keys = on;

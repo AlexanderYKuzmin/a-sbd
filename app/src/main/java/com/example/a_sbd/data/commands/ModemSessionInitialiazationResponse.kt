@@ -1,0 +1,17 @@
+package com.example.a_sbd.data.commands
+
+// MO Status
+const val MO_MESSAGE_TRANSFER_SUCCESSFUL = 0
+const val MO_MESSAGE_TRANSFER_SUCCESSFUL_BUT_MT_TOO_BIG = 1
+const val MO_MESSAGE_TRANSFER_SUCCESSFUL_BUT_LOCATION_NO = 2
+
+const val CONNECTION_DROP = 18
+const val NO_NETWORK_SERVICE = 32
+
+
+// MT Status
+const val MT_NO_SBD_MESSAGE_TO_RECEIVE = 0
+const val MT_MESSAGE_RECEIVE_SUCCESSFUL = 1
+const val MT_MESSAGE_ERROR = 2
+
+

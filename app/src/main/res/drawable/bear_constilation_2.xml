@@ -1,0 +1,48 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="150dp"
+    android:height="200dp"
+    android:viewportWidth="150"
+    android:viewportHeight="200">
+  <path
+      android:name="star_one"
+      android:fillAlpha="0"
+      android:pathData="M30.79,36.9m-3.3,0a3.3,3.3 0,1 1,6.6 0a3.3,3.3 0,1 1,-6.6 0"
+      android:strokeWidth="0.264583"
+      android:fillColor="#ffeeaa"/>
+  <path
+      android:name="star_two"
+      android:fillAlpha="0"
+      android:pathData="M60.68,54.26m-3.3,0a3.3,3.3 0,1 1,6.6 0a3.3,3.3 0,1 1,-6.6 0"
+      android:strokeWidth="0.264583"
+      android:fillColor="#ffeeaa"/>
+  <path
+      android:name="star_three"
+      android:fillAlpha="0"
+      android:pathData="M69.31,75.76m-3.3,0a3.3,3.3 0,1 1,6.6 0a3.3,3.3 0,1 1,-6.6 0"
+      android:strokeWidth="0.264583"
+      android:fillColor="#ffeeaa"/>
+  <path
+      android:name="star_four"
+      android:fillAlpha="0"
+      android:pathData="M81.76,101.5m-3.3,0a3.3,3.3 0,1 1,6.6 0a3.3,3.3 0,1 1,-6.6 0"
+      android:strokeWidth="0.264583"
+      android:fillColor="#ffeeaa"/>
+  <path
+      android:name="star_five"
+      android:fillAlpha="0"
+      android:pathData="M70.75,122.5m-3.3,0a3.3,3.3 0,1 1,6.6 0a3.3,3.3 0,1 1,-6.6 0"
+      android:strokeWidth="0.264583"
+      android:fillColor="#ffeeaa"/>
+  <path
+      android:name="star_six"
+      android:fillAlpha="0"
+      android:pathData="M122.99,133.16m-3.3,0a3.3,3.3 0,1 1,6.6 0a3.3,3.3 0,1 1,-6.6 0"
+      android:strokeWidth="0.264583"
+      android:fillColor="#ffeeaa"/>
+  <path
+      android:name="star_seven"
+      android:fillAlpha="0"
+      android:pathData="M101.91,149.84m-3.3,0a3.3,3.3 0,1 1,6.6 0a3.3,3.3 0,1 1,-6.6 0"
+      android:strokeWidth="0.264583"
+      android:fillColor="#ffeeaa"/>
+</vector>

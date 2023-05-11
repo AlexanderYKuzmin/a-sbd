@@ -7,16 +7,18 @@ import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothProfile
 import android.content.Intent
 import android.util.Log
-import com.example.a_sbd.data.workers.BleConnectionWorker
+//import com.example.a_sbd.data.workers.BleConnectionWorker
 import com.example.a_sbd.ui.MainActivity.Companion.TAG
 import java.util.*
 import kotlin.concurrent.thread
 
 class BleConnectionGattCallback(
-    //private val onGattCallbackListener: BleConnectionWorker.OnGattCallbackListener
+    //private val onGattCallbackListener: OnGattCallbackListener
 ) : BluetoothGattCallback() {
 
     var onGattCallbackListener: OnGattCallbackListener? = null
+
+    private val responseBuilder = StringBuilder()
 
     @SuppressLint("MissingPermission")
     override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
@@ -44,6 +46,7 @@ class BleConnectionGattCallback(
             Log.d("Gatt Callback", "status success")
             val characteristic = gatt?.getService(UNKNOWN_SERVICE)?.getCharacteristic(UNKNOWN_CHARACTERISTIC)
             onGattCallbackListener?.onConnectionEstablished(true, characteristic)
+            Log.d(TAG, "Gatt Callback listener: $onGattCallbackListener")
         } else {
             //Log.w(TAG, "onServicesDiscovered received: $status")
         }
@@ -89,7 +92,13 @@ class BleConnectionGattCallback(
         characteristic: BluetoothGattCharacteristic,
         value: ByteArray
     ) {
-        onGattCallbackListener?.onCharacteristicChanged(characteristic)
+        if (isResponse(String(characteristic.value).trim())) {
+            onGattCallbackListener?.onCharacteristicChanged(responseBuilder.toString())
+            responseBuilder.clear()
+        } else {
+            Log.d(TAG, "Characteristic value is not response or it has a one's part: ${String(characteristic.value)}")
+        }
+
     }
 
     @Deprecated("Deprecated in Java")
@@ -97,7 +106,30 @@ class BleConnectionGattCallback(
         gatt: BluetoothGatt?,
         characteristic: BluetoothGattCharacteristic
     ) {
-        onGattCallbackListener?.onCharacteristicChanged(characteristic)
+        if (isResponse(String(characteristic.value).trim())) {
+            onGattCallbackListener?.onCharacteristicChanged(responseBuilder.toString())
+            responseBuilder.clear()
+        } else {
+            Log.d(TAG, "Characteristic value is not a response or it has one's part: ${String(characteristic.value)}")
+        }
+    }
+
+    private fun isResponse(value: String): Boolean {
+        /*if (value.startsWith("+") && value.endsWith("OK") && responseBuilder.isEmpty()) {
+            responseBuilder.append(value)
+            return true
+        } else if (value.startsWith("+") && responseBuilder.isEmpty()) {
+            responseBuilder.append(value)
+        } else if (value.endsWith("OK") && responseBuilder.isNotEmpty()) {
+            responseBuilder.append(value)
+            return true
+        } else if (responseBuilder.isNotEmpty()){
+            Log.d(TAG, "is Response condition when builder NOT EMPTY: $value")
+            responseBuilder.append(value)
+        }*/
+        responseBuilder.append(value)
+        return value.endsWith("OK")
+        //return false
     }
 
     interface OnGattCallbackListener {
@@ -105,7 +137,7 @@ class BleConnectionGattCallback(
 
         fun onServicesDisCovered(characteristic: BluetoothGattCharacteristic)
 
-        fun onCharacteristicChanged(characteristic: BluetoothGattCharacteristic)
+        fun onCharacteristicChanged(response: String)
     }
 
     companion object {

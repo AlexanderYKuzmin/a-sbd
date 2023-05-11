@@ -7,6 +7,7 @@ data class Message(
     val text: String,
     val messageType: MessageType,
     val messageDate: Date = Date(),
-    val isDeparted: Boolean = false
+    val isDeparted: Boolean = false,
+    val contactId: Long
 ) {
 }

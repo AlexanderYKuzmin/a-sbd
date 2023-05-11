@@ -6,14 +6,14 @@ import com.example.a_sbd.domain.model.ChatContact
 import java.util.*
 import javax.inject.Inject
 
-class ChatContacts @Inject constructor() {
+class ChatContacts {
     private val listOfContacts = mutableListOf<ChatContact>()
 
     private val _contacts = MutableLiveData<List<ChatContact>>()
     val contacts: LiveData<List<ChatContact>>
     get() = _contacts
 
-    init {
+    /*init {
         listOfContacts.add(
             ChatContact(
                 id = 1L,
@@ -43,7 +43,7 @@ class ChatContacts @Inject constructor() {
         )
 
         _contacts.value = listOfContacts
-    }
+    }*/
 
     fun addContact(contact: ChatContact) {
         listOfContacts.add(contact)

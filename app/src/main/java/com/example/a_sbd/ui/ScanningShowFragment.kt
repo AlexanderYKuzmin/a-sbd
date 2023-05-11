@@ -31,6 +31,8 @@ class ScanningShowFragment : Fragment() {
         if (drawable is Animatable) drawable.start()
     }
 
+
+
     companion object {
 
         @JvmStatic

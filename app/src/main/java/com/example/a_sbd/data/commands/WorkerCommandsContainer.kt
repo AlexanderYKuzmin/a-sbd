@@ -1,4 +1,4 @@
-package com.example.a_sbd.data.workers.commands
+package com.example.a_sbd.data.commands
 
 // requests
 const val SET_BLE_CONNECTION = 100001

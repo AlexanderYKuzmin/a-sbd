@@ -6,9 +6,10 @@ import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkManager
-import com.example.a_sbd.data.workers.BleConnectionWorker
-import com.example.a_sbd.data.workers.commands.REMOVE_BLE_CONNECTION
-import com.example.a_sbd.data.workers.commands.SET_BLE_CONNECTION
+//import com.example.a_sbd.data.workers.BleConnectionWorker
+import com.example.a_sbd.data.commands.REMOVE_BLE_CONNECTION
+import com.example.a_sbd.data.commands.SET_BLE_CONNECTION
+import com.example.a_sbd.services.BleService
 import com.example.a_sbd.ui.MainActivity
 import com.example.a_sbd.ui.MainActivityViewModel.Companion.CONNECTION_WORK
 import com.example.a_sbd.ui.MainActivityViewModel.Companion.WORKER_COMMAND
@@ -17,7 +18,7 @@ import javax.inject.Inject
 class SetBleConnectionUseCase @Inject constructor(
     private val application: Application
 ) {
-    operator fun invoke(address: String?) {
+   /* operator fun invoke(address: String?) {
         Log.d(MainActivity.TAG, "Invoke SetBleConnection")
 
         val inputData = if (address.isNullOrEmpty()) {
@@ -38,6 +39,14 @@ class SetBleConnectionUseCase @Inject constructor(
         WorkManager.getInstance(application).enqueueUniqueWork(
             CONNECTION_WORK, ExistingWorkPolicy.REPLACE, connectRequest
         )
+    }*/
+
+    fun connect(bleService: BleService, address: String) {
+        bleService.connect(address)
+    }
+
+    fun disconnect(bleService: BleService) {
+
     }
 
     companion object {

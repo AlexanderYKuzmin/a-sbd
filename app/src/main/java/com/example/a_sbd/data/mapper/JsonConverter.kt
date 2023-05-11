@@ -19,6 +19,11 @@ class JsonConverter @Inject constructor(){
         return gson.fromJson(jsonString, arrayListDeviceSimpleType)
     }
 
+    fun fromJsonToMapSessionParameters(jsonString: String): Map<String, Int> {
+        val map = object : TypeToken<HashMap<String, Int>>() {}.type
+        return gson.fromJson(jsonString, map)
+    }
+
     fun <T> fromJsonToSimpleDataClass(jsonString: String, typeClass: Class<T>): T {
         return gson.fromJson(jsonString, typeClass)
     }

@@ -1,6 +1,7 @@
 package com.example.a_sbd.ui.chats
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -12,6 +13,7 @@ import com.example.a_sbd.ASBDApp
 import com.example.a_sbd.R
 import com.example.a_sbd.databinding.FragmentChatContactsBinding
 import com.example.a_sbd.domain.model.ChatContact
+import com.example.a_sbd.ui.MainActivity.Companion.TAG
 import com.example.a_sbd.ui.ViewModelFactory
 import com.example.a_sbd.ui.chats.adapters.ChatContactsAdapter
 import javax.inject.Inject
@@ -58,14 +60,20 @@ class ChatContactsFragment : Fragment() {
 
         val adapter = ChatContactsAdapter(requireActivity())
         adapter.onChatClickListener = object : ChatContactsAdapter.OnChatClickListener {
-            override fun onChatClick(id: Long, name: String) {
-                launchSingleChatFragment(bundleOf("id" to id, "name" to name))
+            override fun onChatClick(chatContact: ChatContact) {
+                launchSingleChatFragment(
+                    bundleOf(
+                        CONTACT_ID to chatContact.id,
+                        CONTACT_NAME to chatContact.firstName + " " + chatContact.lastName
+                    )
+                )
             }
         }
 
         binding.rvChatContacts.adapter = adapter
 
         chatContactsViewModel.chatContacts.observe(requireActivity()) {
+            Log.d(TAG, "Observe chatContacts. Start Adapter. ${it.size}")
             adapter.submitList(it)
         }
 
@@ -97,5 +105,11 @@ class ChatContactsFragment : Fragment() {
 
     interface HasAppComponent {
         fun getAppComponent()
+    }
+
+    companion object {
+        const val CHAT_CONTACT = "contact"
+        const val CONTACT_ID = "id"
+        const val CONTACT_NAME = "name"
     }
 }

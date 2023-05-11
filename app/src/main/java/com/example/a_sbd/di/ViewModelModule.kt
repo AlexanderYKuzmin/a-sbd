@@ -3,6 +3,7 @@ package com.example.a_sbd.di
 import androidx.lifecycle.ViewModel
 import com.example.a_sbd.ui.MainActivityViewModel
 import com.example.a_sbd.ui.chats.ChatContactsViewModel
+import com.example.a_sbd.ui.chats.SingleChatViewModel
 import dagger.Binds
 import dagger.MapKey
 import dagger.Module
@@ -19,4 +20,9 @@ interface ViewModelModule {
     @ViewModelKey(ChatContactsViewModel::class)
     @Binds
     fun bindChatContactsViewModel(viewModel: ChatContactsViewModel): ViewModel
+
+    /*@IntoMap
+    @ViewModelKey(SingleChatViewModel::class)
+    @Binds
+    fun bindSingleChatViewModel(viewModel: SingleChatViewModel): ViewModel*/
 }

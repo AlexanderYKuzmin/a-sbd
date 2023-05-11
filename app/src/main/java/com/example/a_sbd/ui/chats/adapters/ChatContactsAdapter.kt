@@ -30,17 +30,16 @@ class ChatContactsAdapter(
             with(chatContact) {
                 tvFirstName.text = firstName
                 tvLastName.text = lastName
-                tvLastMessage.text = lastMessage
-                tvMessageDate.text = lastMessageDate.formatToDateTime()
+                tvLastMessage.text = if (messages.isNotEmpty()) messages[messages.lastIndex].text else ""
+                tvMessageDate.text = messages[messages.lastIndex].messageDate.formatToDateTime()
                 root.setOnClickListener {
-                    onChatClickListener?.onChatClick(id, String.format("%s %s", firstName, lastName))
+                    onChatClickListener?.onChatClick(chatContact)
                 }
             }
-
         }
     }
 
     interface OnChatClickListener {
-        fun onChatClick(id: Long, name: String)
+        fun onChatClick(chatContact: ChatContact)
     }
 }

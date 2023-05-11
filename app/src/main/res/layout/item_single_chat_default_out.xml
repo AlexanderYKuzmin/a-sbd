@@ -1,6 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <TextView
+        android:id="@+id/tv_message_text_default_out"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:minWidth="60dp"
+        android:maxWidth="270dp"
+        android:padding="4dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginTop="6dp"
+        android:layout_marginBottom="6dp"
+        android:textSize="18dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintWidth_percent="0.7"
+        android:background="@drawable/shape_bg_default_out"
+        tools:text="Hoiru rotot  pwpwoiwe....... ow dkjgksl'gsg"
+        />
+
+    <TextView
+        android:id="@+id/tv_message_time_default_out"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:minWidth="100dp"
+        android:padding="2dp"
+        android:textAlignment="textEnd"
+        android:layout_marginBottom="4dp"
+        android:layout_marginEnd="6dp"
+        android:textSize="13dp"
+        android:textColor="#FFFFFF"
+        app:layout_constraintEnd_toStartOf="@id/tv_message_text_default_out"
+        app:layout_constraintBottom_toBottomOf="@id/tv_message_text_default_out"
+        app:layout_constraintTop_toTopOf="@id/tv_message_text_default_out"
+        tools:text="24:07"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
