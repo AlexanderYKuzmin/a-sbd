@@ -19,6 +19,9 @@ data class MessageDb(
 
     val date: String,
 
+    @ColumnInfo(name = "date_h")
+    val dateHours: Int,
+
     @ColumnInfo(name = "is_departed")
     val isDeparted: Int,
 

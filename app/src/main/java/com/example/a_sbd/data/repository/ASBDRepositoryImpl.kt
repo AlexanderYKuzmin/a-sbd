@@ -8,7 +8,9 @@ import com.example.a_sbd.data.mapper.TransformationMapper
 import com.example.a_sbd.domain.ASBDRepository
 import com.example.a_sbd.domain.model.ChatContact
 import com.example.a_sbd.domain.model.Message
+import com.example.a_sbd.extensions.hours
 import com.example.a_sbd.ui.MainActivity.Companion.TAG
+import java.sql.Date
 import javax.inject.Inject
 
 class ASBDoRepositoryImpl @Inject constructor(
@@ -59,6 +61,13 @@ class ASBDoRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getMessageDelayed(): LiveData<List<Message>> {
+        /*val getAll = chatContactsDao.getAll()
+        val getAllValue = getAll.value
+        getAllValue?.forEach {
+            Log.d(TAG, "ASBDRepository: get all : contact_id = ${it.contact.id}, ${it.messages.first()}")
+        }*/
+        val liveData = chatContactsDao.getMessageDelayed()
+        Log.d(TAG, "ASBDRepository: get all delayed messages: ${liveData}")
         return Transformations.map(chatContactsDao.getMessageDelayed()) { list ->
             list.map {
                 mapper.mapMessageDbToEntity(it)
@@ -71,6 +80,12 @@ class ASBDoRepositoryImpl @Inject constructor(
             list.map {
                 mapper.mapMessageDbToEntity(it)
             }
+        }
+    }
+
+    override suspend fun getMessagesByContactIdIncome(contactId: Long): List<Message> {
+        return chatContactsDao.getMessagesByContactIdIncome(contactId).map {
+            mapper.mapMessageDbToEntity(it)
         }
     }
 
@@ -94,5 +109,9 @@ class ASBDoRepositoryImpl @Inject constructor(
 
     override suspend fun addMessage(message: Message): Long {
         return chatContactsDao.insertMessage(mapper.mapMessageToMessageDb(message))
+    }
+
+    override suspend fun deleteOldMessages(oldDateHours: Int): Int {
+        return chatContactsDao.deleteOldMessages(oldDateHours)
     }
 }

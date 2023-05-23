@@ -8,8 +8,11 @@ import com.example.a_sbd.domain.model.ChatContact
 import com.example.a_sbd.domain.model.Message
 import com.example.a_sbd.domain.model.MessageType
 import com.example.a_sbd.extensions.formatToDateTimeUpToSeconds
+import com.example.a_sbd.extensions.hours
 import com.example.a_sbd.extensions.parseFromDateDb
 import com.example.a_sbd.ui.MainActivity.Companion.TAG
+import java.sql.Date
+import java.time.LocalDate
 
 class TransformationMapper {
     fun mapContactDbToEntity(contactDb: ChatContactDb): ChatContact {
@@ -60,6 +63,7 @@ class TransformationMapper {
             text = message.text,
             type = message.messageType.value,
             date = message.messageDate.formatToDateTimeUpToSeconds(),
+            dateHours = message.messageDate.hours(),
             isDeparted = if (message.isDeparted) 1 else 0,
             contactId = message.contactId
         )

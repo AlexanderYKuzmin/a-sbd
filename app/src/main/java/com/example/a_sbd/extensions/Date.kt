@@ -18,5 +18,9 @@ fun Date.formatToDateTimeUpToSeconds(): String {
     return sdf.format(this)
 }
 
+fun Date.hours(): Int {
+    return (this.time / (3600 * 1000)).toInt()
+}
+
 
 

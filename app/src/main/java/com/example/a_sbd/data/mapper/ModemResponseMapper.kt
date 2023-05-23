@@ -10,7 +10,18 @@ import com.example.a_sbd.ui.MainActivity.Companion.TAG
 import javax.inject.Inject
 
 class ModemResponseMapper @Inject constructor() {
-   fun parseSignalQuality(modemResponseText: String): Int {
+
+    fun parseSignalEventReport(modemResponseText: String): Int {
+        Log.d(TAG, "Parse signal event report response")
+        return if (modemResponseText.contains("+CIEV:")) {
+            val index = modemResponseText.indexOf(',')
+            modemResponseText.substring(index + 1, index + 2).toInt()
+        } else {
+            throw java.lang.RuntimeException("Wrong modem signal event report response: $modemResponseText")
+        }
+    }
+
+    fun parseSignalQuality(modemResponseText: String): Int {
        Log.d(TAG, "Parse signal quality response")
        return if (modemResponseText.contains("+CSQ:")) {
            val index = modemResponseText.indexOf(':')
@@ -36,5 +47,18 @@ class ModemResponseMapper @Inject constructor() {
             MT_MSN to sbdiDataArray[4].trim().toInt(),
             QUEUE_LENGTH to sbdiDataArray[5].trim().toInt()
         )
+    }
+
+    fun parseSBDRTResponse(modemResponseText: String): String {
+        val index = modemResponseText.indexOf(':')
+        val parsedResponse = modemResponseText.substring(index + 1, modemResponseText.length - 2)
+        Log.d(TAG, "Parsed SBDRT: $parsedResponse")
+        return parsedResponse
+    }
+
+    fun parseSBDRINGActivation(modemResponseText: String): Boolean {
+        val index = modemResponseText.indexOf('=')
+        val mtaStatus = modemResponseText.substring(index + 1, index + 2).toInt()
+        return mtaStatus == 0
     }
 }

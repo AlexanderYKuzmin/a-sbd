@@ -3,6 +3,7 @@ package com.example.a_sbd.domain
 import androidx.lifecycle.LiveData
 import com.example.a_sbd.domain.model.ChatContact
 import com.example.a_sbd.domain.model.Message
+import java.sql.Date
 
 interface ASBDRepository {
 
@@ -20,6 +21,8 @@ interface ASBDRepository {
 
     fun getMessages(contactId: Long): LiveData<List<Message>>
 
+    suspend fun getMessagesByContactIdIncome(contactId: Long): List<Message>
+
     suspend fun updateMessage(message: Message): Int
 
     suspend fun updateMessageByIdToDeparted(id: Long): Int
@@ -29,4 +32,6 @@ interface ASBDRepository {
     suspend fun addMessages(messages: Array<Message>): List<Long>
 
     suspend fun addMessage(message: Message): Long
+
+    suspend fun deleteOldMessages(oldDateHours: Int): Int
 }

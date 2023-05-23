@@ -14,16 +14,16 @@ class ChatContactsViewModel @Inject constructor(
     private val application: Application,
     private val getAllChatContactsUseCase: GetAllChatContactsUseCase,
     private val addContactUseCase: AddContactsUseCase,
-    private val addMessageUseCase: InsertMessagesUseCase
+    private val addMessageUseCase: InsertMessageUseCase
 ) : ViewModel() {
     private val listOfContacts = mutableListOf<ChatContact>()
     private val listOfMessages = mutableListOf<Message>()
 
     val chatContacts: LiveData<List<ChatContact>> = getAllChatContactsUseCase()
 
-    init {
+    /*init {
 
-        /*listOfContacts.add(
+        listOfContacts.add(
             ChatContact(
                 id = 1L,
                 firstName = "Владимир",
@@ -78,7 +78,7 @@ class ChatContactsViewModel @Inject constructor(
                 id = 3L,
                 text = "Yellow leaves are falling down!",
                 messageType = MessageType.START_IN,
-                messageDate = getDateOf(2022, Calendar.DECEMBER, 25, 14, 15, 12),
+                messageDate = getDateOf(2023, Calendar.MAY, 18, 14, 15, 12),
                 isDeparted = true,
                 3L
             )
@@ -89,7 +89,7 @@ class ChatContactsViewModel @Inject constructor(
                 id = 4L,
                 text = "Wow, wow, wow!!!",
                 messageType = MessageType.START_IN,
-                messageDate = getDateOf(2022, Calendar.DECEMBER, 30, 20, 15, 12),
+                messageDate = getDateOf(2023, Calendar.MAY, 19, 20, 15, 12),
                 isDeparted = true,
                 1L
             )
@@ -100,7 +100,18 @@ class ChatContactsViewModel @Inject constructor(
                 id = 5L,
                 text = "Yeah! I got it!",
                 messageType = MessageType.START_IN,
-                messageDate = getDateOf(2022, Calendar.DECEMBER, 30, 21, 10, 12),
+                messageDate = getDateOf(2023, Calendar.MAY, 19, 21, 10, 12),
+                isDeparted = true,
+                2L
+            )
+        )
+
+        listOfMessages.add(
+            Message(
+                id = 6L,
+                text = "Oh early days come!",
+                messageType = MessageType.START_IN,
+                messageDate = getDateOf(2023, Calendar.MAY, 20, 21, 10, 12),
                 isDeparted = true,
                 2L
             )
@@ -108,9 +119,10 @@ class ChatContactsViewModel @Inject constructor(
 
         viewModelScope.launch {
             addContactUseCase(listOfContacts.toTypedArray())
-            addMessageUseCase(listOfMessages.toTypedArray())
-        }*/
-    }
+            listOfMessages.forEach { addMessageUseCase(it) }
+            //addMessageUseCase(listOfMessages.toTypedArray())
+        }
+    }*/
 
     private fun getDateOf(i: Int, i1: Int, i2: Int, i3: Int, i4: Int, i5: Int): Date {
         val calendar = Calendar.getInstance()

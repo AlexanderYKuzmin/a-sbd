@@ -8,7 +8,7 @@ import com.example.a_sbd.data.database.model.ChatContactDb
 import com.example.a_sbd.data.database.model.MessageDb
 import java.io.File
 
-@Database(entities = [ChatContactDb::class, MessageDb::class], version = 3, exportSchema = false)
+@Database(entities = [ChatContactDb::class, MessageDb::class], version = 4, exportSchema = false)
 abstract class ASBDDatabase : RoomDatabase(){
     companion object {
 

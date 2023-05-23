@@ -15,6 +15,7 @@ import com.example.a_sbd.data.bluetooth.BleConnectionGattCallback
 import com.example.a_sbd.data.commands.*
 import com.example.a_sbd.data.mapper.ModemResponseMapper
 import com.example.a_sbd.data.mapper.JsonConverter
+import com.example.a_sbd.extensions.validateTextLength
 import com.example.a_sbd.ui.MainActivity.Companion.TAG
 
 class BleService : LifecycleService() {
@@ -31,9 +32,12 @@ class BleService : LifecycleService() {
     private var bluetoothGatt: BluetoothGatt? = null
     private var characteristic: BluetoothGattCharacteristic? = null
 
-    private var _isServiceIdle = false
+    //private var _isServiceIdle = false
+    private var _isSbdRingActive = false
 
-    private var messageIdToWrite = -1L
+    private var messageIdInBuffer = -1L
+
+    private var currentModemCommand: String? = null
 
     private val _testLiveData = MutableLiveData<Unit>()
         // do i need live data?
@@ -50,7 +54,6 @@ class BleService : LifecycleService() {
         bleConnectionGattCallback = BleConnectionGattCallback().apply {
             onGattCallbackListener = bleListener
         }
-
         return true
     }
 
@@ -72,6 +75,15 @@ class BleService : LifecycleService() {
         bluetoothGatt = null
     }
 
+    /*fun enableSignalLevelReport(enabled: Boolean) {
+        if (enabled) {
+            writeCharacteristic(CHECK_SIGNAL_START, "1,1")
+        } else {
+            writeCharacteristic(CHECK_SIGNAL_STOP, "0,0")
+        }
+
+    }*/
+
     fun checkSignalLevel() {
         writeCharacteristic(GET_SIGNAL_QUALITY_LEVEL, null)
     }
@@ -82,25 +94,41 @@ class BleService : LifecycleService() {
 
     fun writeToBuffer(text: String, id: Long) {
         Log.d(TAG, "BleService. Writing to buffer.")
-        messageIdToWrite = id
-        writeCharacteristic(WRITE_TEXT_COMMAND, toConsistentText(text))
+        messageIdInBuffer = id
+        writeCharacteristic(WRITE_TEXT_COMMAND, text.validateTextLength())
     }
 
     fun readFromBuffer() {
-        // todo cycling maybe
+        Log.d(TAG, "BleService. Reading from buffer.")
+        writeCharacteristic(BUFFER_READ_TEXT, null)
     }
 
-    fun setSbdRingState() {
+    fun setSbdRingStateInActive(isEnabled: Boolean) {
+        if (isEnabled) {
+            writeCharacteristic(SBDRING_ACTIVATED, "1")
+        } else {
+            writeCharacteristic(SBDRING_DISACTIVATED, "0")
+        }
+    }
 
+    fun clearMoBuffer() {
+        writeCharacteristic(CLEAR_MO_BUFFER, null)
     }
 
     fun resetMessageId() {
-        messageIdToWrite = -1L
+        messageIdInBuffer = -1L
     }
 
     @SuppressLint("MissingPermission")
     private fun writeCharacteristic(modemCommand: String, parameters: String?) {
-        _isServiceIdle = false
+        //_isServiceIdle = false
+        if (modemCommand != SBDRING_DISACTIVATED) {
+            setSbdRingStateInActive(false)
+            while (_isSbdRingActive) {
+                Log.d(TAG, "SBDRING is active. Awaiting for turn it off.")
+                Thread.sleep(100)
+            }
+        }
         val value = if (parameters != null) {
             modemCommand + COMMAND_DELIMITER + parameters + END_OF_COMMAND
         } else {
@@ -116,9 +144,6 @@ class BleService : LifecycleService() {
                     characteristic?.value = value
                     it.writeCharacteristic(characteristic!!)
             }
-            /*while (!_isTaskDone) {
-
-            }*/
             Thread.sleep(200)
         }
     }
@@ -167,10 +192,9 @@ class BleService : LifecycleService() {
             } else {
                 Log.d(TAG, "Gatt disconnected")
             }
-
         }
 
-        override fun onServicesDisCovered(characteristic: BluetoothGattCharacteristic) {
+        override fun onServicesDiscovered(characteristic: BluetoothGattCharacteristic) {
             TODO("Not yet implemented")
         }
 
@@ -179,29 +203,50 @@ class BleService : LifecycleService() {
 
             val value = response
             when  {
+                /*value.contains("+CIEV") -> {
+                    val signal = mapper.parseSignalEventReport(value)
+                    updateBroadcast(ACTION_EVENT_SIGNAL_REPORT_ENABLE, signal)
+                }*/
                 value.contains("CSQ") -> {
                     val signal = mapper.parseSignalQuality(value)
                     updateBroadcast(ACTION_SIGNAL_LEVEL, signal)
                 }
                 value.contains("SBDIX") -> {
                     val sessionData = mapper.parseSBDIXResponse(value) as HashMap
-                    if (messageIdToWrite != -1L) sessionData[MESSAGE_ID] = messageIdToWrite.toInt() // todo change map to data class may be
+                    if (messageIdInBuffer != -1L) sessionData[MESSAGE_ID] = messageIdInBuffer.toInt() // todo change map to data class may be
                     updateBroadcast(ACTION_DATA_AVAILABLE, jsonConverter.toJson(sessionData))
                 }
                 value.contains("SBDWT") -> {
                     Log.d(TAG, "Response contains SBDWT. Sending action data.")
-                    updateBroadcast(ACTION_DATA_WRITTEN, messageIdToWrite)
+                    updateBroadcast(ACTION_DATA_WRITTEN, messageIdInBuffer)
+                }
+                value.contains("SBDRT") -> {
+                    Log.d(TAG, "Response contains SBDRT. Reading action data.")
+                    val textIncome = mapper.parseSBDRTResponse(value)
+                    updateBroadcast(ACTION_DATA_READ, textIncome)
+                }
+                value.contains("SBDRING") -> {
+                    Log.d(TAG, "Response contains SBDRING.")
+                    setSbdRingStateInActive(false)
+                }
+                value.contains("SBDD0") -> {
+                    Log.d(TAG, "MO buffer cleared.")
                     checkSignalLevel()
                 }
+                value.contains("SBDMTA") -> {
+                    val isSbdRingEnabled = mapper.parseSBDRINGActivation(value)
+                    if (!isSbdRingEnabled) {
+                        _isSbdRingActive = false
+                        clearMoBuffer()
+                    } else _isSbdRingActive = true
+                }
             }
-
-            _isServiceIdle = true  //
         }
     }
 
-    private fun toConsistentText(text: String): String {
+    /*private fun toConsistentText(text: String): String {
         return if (text.length > 117) text.substring(0, 118) else text
-    }
+    }*/
 
     inner class LocalBinder : Binder() {
         fun getService() : BleService {
@@ -221,7 +266,10 @@ class BleService : LifecycleService() {
         const val ACTION_SIGNAL_LEVEL = "a_sbd.services.ACTION_SIGNAL_LEVEL"
         const val ACTION_SERVICE_IDLE = "a_sbd.services.ACTION_SERVICE_IDLE"
         const val ACTION_MODEM_READY = "a_sbd.services.ACTION_MODEM_READY"
+        const val ACTION_MO_BUFFER_CLEARED = "a_sbd.services.ACTION_MO_BUFFER_CLEARED"
+        const val ACTION_EVENT_SIGNAL_REPORT_ENABLE = "a_sbd.services.ACTION_CIEV_ENABLE"
         const val ACTION_MODEM_CIEV_DISABLE = "a_sbd.services.ACTION_MODEM_CIEV_DISABLE"
+
 
         const val IS_CONNECTED = "is_gatt_connected"
         const val SIGNAL_QUALITY = "signal_quality"

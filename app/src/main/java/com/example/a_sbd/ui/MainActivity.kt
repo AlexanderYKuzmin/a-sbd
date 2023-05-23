@@ -10,7 +10,6 @@ import android.os.Build.VERSION
 import android.os.Build.VERSION_CODES
 import android.os.Bundle
 import android.os.IBinder
-import android.os.Parcelable
 import android.util.Log
 import android.view.*
 import android.widget.ImageView
@@ -28,7 +27,6 @@ import androidx.navigation.ui.setupWithNavController
 import androidx.work.WorkManager
 import com.example.a_sbd.ASBDApp
 import com.example.a_sbd.R
-import com.example.a_sbd.data.mapper.JsonConverter
 import com.example.a_sbd.databinding.ActivityMainBinding
 import com.example.a_sbd.domain.model.DeviceSimple
 import com.example.a_sbd.domain.model.Message
@@ -39,10 +37,12 @@ import com.example.a_sbd.services.BleService
 import com.example.a_sbd.services.BleService.Companion.ACTION_DATA_AVAILABLE
 import com.example.a_sbd.services.BleService.Companion.ACTION_DATA_READ
 import com.example.a_sbd.services.BleService.Companion.ACTION_DATA_WRITTEN
+import com.example.a_sbd.services.BleService.Companion.ACTION_EVENT_SIGNAL_REPORT_ENABLE
 import com.example.a_sbd.services.BleService.Companion.ACTION_GATT_CONNECTED
 import com.example.a_sbd.services.BleService.Companion.ACTION_GATT_DISCONNECTED
 import com.example.a_sbd.services.BleService.Companion.ACTION_GATT_SERVICES_DISCOVERED
 import com.example.a_sbd.services.BleService.Companion.ACTION_MODEM_READY
+import com.example.a_sbd.services.BleService.Companion.ACTION_MO_BUFFER_CLEARED
 import com.example.a_sbd.services.BleService.Companion.ACTION_SERVICE_CONNECTED
 import com.example.a_sbd.services.BleService.Companion.ACTION_SERVICE_IDLE
 import com.example.a_sbd.services.BleService.Companion.ACTION_SIGNAL_LEVEL
@@ -182,8 +182,12 @@ class MainActivity :
             }
         }
 
+        viewModel.checkSignalAndStartSession.observe(this) {
+            bleService?.checkSignalLevel()
+        }
+
         viewModel.startSession.observe(this) {
-            bleService?.openSession()
+            bleService?.openSession()  //no need open session at once. First we need to check for unsent messages.
         }
 
         viewModel.startWriteBuffer.observe(this) {
@@ -191,16 +195,17 @@ class MainActivity :
             bleService?.writeToBuffer(it.text, it.id)
         }
 
-        viewModel.messagesUnsent.observe(this) { list ->
-            if (!list.isNullOrEmpty()) {
-                with(list.first()) {
-                //todo if service idle
-                    bleService?.writeToBuffer(text, id)
-                }
-            }
+        viewModel.startReadBuffer.observe(this) {
+            Log.d(TAG, "Activity. Starting read buffer")
+            bleService?.readFromBuffer()
         }
 
-        viewModel.resetMessageIdService.observe(this) {
+        viewModel.activateSbdRing.observe(this) {
+            Log.d(TAG, "Activity. Set SBDRING.")
+            bleService?.setSbdRingStateInActive(it)
+        }
+
+        viewModel.resetMessageIdInService.observe(this) {
             bleService?.resetMessageId()
         }
 
@@ -225,8 +230,8 @@ class MainActivity :
 
     override fun onDestroy() {
         super.onDestroy()
-        //workManager.cancelAllWork()
-        //unregisterReceiver(scanBroadcastReceiver)
+        workManager.cancelAllWork()
+        unregisterReceiver(scanBroadcastReceiver)
 
         Log.d(TAG, "On destroy")
     }
@@ -268,9 +273,11 @@ class MainActivity :
             addAction(ACTION_DATA_READ)
             addAction(ACTION_DATA_WRITTEN)
             addAction(ACTION_SIGNAL_LEVEL)
+            addAction(ACTION_EVENT_SIGNAL_REPORT_ENABLE)
             addAction(ACTION_SERVICE_IDLE)
             addAction(ACTION_MODEM_READY)
             addAction(ACTION_SERVICE_CONNECTED)
+            addAction(ACTION_MO_BUFFER_CLEARED)
         }
     }
 
@@ -281,11 +288,16 @@ class MainActivity :
                 ACTION_GATT_CONNECTED -> {
                     //_isBleConnected = intent.getBooleanExtra(BleService.IS_CONNECTED, false)
                     viewModel.updateAppStateConnected(true)
-                    bleService?.checkSignalLevel()
+                    viewModel.defaultActionsAfterConnectionSet(this@MainActivity) // todo init preparations
                 }
                 ACTION_GATT_DISCONNECTED -> {
-                    //TODO
+                    viewModel.updateAppStateConnected(false)
+                //TODO
                 }
+                /*ACTION_EVENT_SIGNAL_REPORT_ENABLE -> {
+                    val signalLevel = intent.getIntExtra(ACTION_EVENT_SIGNAL_REPORT_ENABLE, 0)
+                    viewModel.setSignalQualityIndicator(signalLevel)
+                }*/
                 ACTION_SIGNAL_LEVEL -> {
                     val signal = intent.getIntExtra(ACTION_SIGNAL_LEVEL, 0)
                     viewModel.setSignalQualityIndicator(signal)
@@ -304,6 +316,10 @@ class MainActivity :
                     val id = intent.getLongExtra(ACTION_DATA_WRITTEN, -1)
                     if (id != WRONG_ID) viewModel.handleMessageWritten(id)
                     else throw RuntimeException("Wrong id to update message.")
+                }
+                ACTION_DATA_READ -> {
+                    val textIncome = intent.getStringExtra(ACTION_DATA_READ)
+                    if (!textIncome.isNullOrEmpty()) viewModel.handleMessageIncome(textIncome, 3L)
                 }
             }
         }
@@ -453,30 +469,27 @@ class MainActivity :
     }
 
     private fun setTitle(view: TextView) {
-
         val typeFace = Typeface.createFromAsset(assets, "fonts/invasion.ttf")
-        view.typeface = typeFace
-        //val subtitle = toolbar.getChildAt(0) as TextView
-
-        view.setPadding(dpToIntPx(16), 0, 0,0)
-        //subtitle.setPadding(dpToIntPx(16), 0, 0,0)
+        with(view) {
+            typeface = typeFace
+            setPadding(dpToIntPx(16), 0, 0, 0)
+        }
     }
 
     private fun setLogo() {
         val logo = if (binding.toolbar.childCount > 1) binding.toolbar.getChildAt(1) as ImageView else null
-        logo?.scaleType = ImageView.ScaleType.CENTER_CROP
-
-        logo?.layoutParams?.width = dpToIntPx(60)
-        logo?.layoutParams?.height = dpToIntPx(50)
+        logo?.let {
+            with(it) {
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                layoutParams?.width = dpToIntPx(60)
+                layoutParams?.height = dpToIntPx(50)
+            }
+        }
     }
 
     private fun checkBluetoothPermissions(): Boolean {
-        if (!hasRequiredRuntimePermissions()) {
-            requestRelevantRuntimePermissions()
-        } else {
-            return true
-        }
-        //throw java.lang.RuntimeException("Invalid permission state!")
+        if (!hasRequiredRuntimePermissions()) requestRelevantRuntimePermissions()
+        else return true
         return false
     }
 
@@ -487,8 +500,7 @@ class MainActivity :
     }
 
     private fun launchShowConnectFragment() {
-        //navController.navigate(R.id.connectShowFragment)
-        navController.navigate(R.id.connectShowFragment, )
+        navController.navigate(R.id.connectShowFragment)
     }
 
     // Listen click in device list

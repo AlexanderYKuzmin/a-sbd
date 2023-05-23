@@ -7,7 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.a_sbd.domain.model.Message
 import com.example.a_sbd.domain.model.MessageType.*
-import com.example.a_sbd.domain.usecases.InsertMessagesUseCase
+import com.example.a_sbd.domain.usecases.InsertMessageUseCase
 import com.example.a_sbd.domain.usecases.GetAllMessagesOfContactUseCase
 import com.example.a_sbd.ui.MainActivity.Companion.TAG
 import kotlinx.coroutines.launch
@@ -15,7 +15,7 @@ import java.util.*
 
 class SingleChatViewModel (
     getAllMessagesOfContactUseCase: GetAllMessagesOfContactUseCase,
-    private val insertMessageUseCase: InsertMessagesUseCase,
+    private val insertMessageUseCase: InsertMessageUseCase,
     private val contactId: Long
 ) : ViewModel() {
 

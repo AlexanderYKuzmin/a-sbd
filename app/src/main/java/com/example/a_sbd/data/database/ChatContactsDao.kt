@@ -6,6 +6,7 @@ import com.example.a_sbd.data.database.model.ChatContactDb
 import com.example.a_sbd.data.database.model.ChatContactWithMessages
 import com.example.a_sbd.data.database.model.MessageDb
 import com.example.a_sbd.domain.model.Message
+import java.sql.Date
 
 @Dao
 interface ChatContactsDao {
@@ -29,6 +30,9 @@ interface ChatContactsDao {
     @Query("SELECT * FROM messages WHERE contact_id == :contactId")
     fun getMessages(contactId: Long): LiveData<List<MessageDb>>
 
+    @Query("SELECT * FROM messages WHERE contact_id =: contactId AND (type = 'start_in' OR type = 'normal_in'")
+    fun getMessagesByContactIdIncome(contactId: Long): List<MessageDb>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertContacts(chatContactDbs: Array<ChatContactDb>)
 
@@ -49,4 +53,7 @@ interface ChatContactsDao {
 
     @Delete
     fun deleteMessage(messageDb: MessageDb)
+
+    @Query("DELETE FROM messages WHERE date_h < :oldDate")
+    suspend fun deleteOldMessages(oldDate: Int): Int
 }

@@ -31,7 +31,7 @@ class ChatContactsAdapter(
                 tvFirstName.text = firstName
                 tvLastName.text = lastName
                 tvLastMessage.text = if (messages.isNotEmpty()) messages[messages.lastIndex].text else ""
-                tvMessageDate.text = messages[messages.lastIndex].messageDate.formatToDateTime()
+                tvMessageDate.text = if (messages.isNotEmpty()) messages[messages.lastIndex].messageDate.formatToDateTime() else ""
                 root.setOnClickListener {
                     onChatClickListener?.onChatClick(chatContact)
                 }

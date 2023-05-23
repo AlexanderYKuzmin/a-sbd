@@ -70,6 +70,7 @@ class SingleChatFragment : Fragment() {
 
         binding.ibtnSendMessage.setOnClickListener {
             val text = binding.etTextInput.text.toString()
+            binding.etTextInput.text.clear()
             singleChatViewModel.insertMessageToDb(text)
         }
 

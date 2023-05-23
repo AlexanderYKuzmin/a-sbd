@@ -93,8 +93,9 @@ class BleConnectionGattCallback(
         value: ByteArray
     ) {
         if (isResponse(String(characteristic.value).trim())) {
-            onGattCallbackListener?.onCharacteristicChanged(responseBuilder.toString())
+            val finalResponse = responseBuilder.toString()
             responseBuilder.clear()
+            onGattCallbackListener?.onCharacteristicChanged(finalResponse)
         } else {
             Log.d(TAG, "Characteristic value is not response or it has a one's part: ${String(characteristic.value)}")
         }
@@ -107,8 +108,9 @@ class BleConnectionGattCallback(
         characteristic: BluetoothGattCharacteristic
     ) {
         if (isResponse(String(characteristic.value).trim())) {
-            onGattCallbackListener?.onCharacteristicChanged(responseBuilder.toString())
+            val finalResponse = responseBuilder.toString()
             responseBuilder.clear()
+            onGattCallbackListener?.onCharacteristicChanged(finalResponse)
         } else {
             Log.d(TAG, "Characteristic value is not a response or it has one's part: ${String(characteristic.value)}")
         }
@@ -128,14 +130,14 @@ class BleConnectionGattCallback(
             responseBuilder.append(value)
         }*/
         responseBuilder.append(value)
-        return value.endsWith("OK")
+        return (value.startsWith("SBDRING") || value.endsWith("OK"))
         //return false
     }
 
     interface OnGattCallbackListener {
         fun onConnectionEstablished(isConnectionEstablished: Boolean,  characteristic: BluetoothGattCharacteristic?)
 
-        fun onServicesDisCovered(characteristic: BluetoothGattCharacteristic)
+        fun onServicesDiscovered(characteristic: BluetoothGattCharacteristic)
 
         fun onCharacteristicChanged(response: String)
     }
