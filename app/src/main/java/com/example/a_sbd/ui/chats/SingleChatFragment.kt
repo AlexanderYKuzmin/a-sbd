@@ -12,6 +12,7 @@ import androidx.navigation.fragment.navArgs
 import com.example.a_sbd.ASBDApp
 import com.example.a_sbd.databinding.FragmentSingleChatBinding
 import com.example.a_sbd.domain.model.Message
+import com.example.a_sbd.ui.MainActivity.Companion.FRAGMENT_IN_ACTION
 import com.example.a_sbd.ui.ViewModelFactory
 import com.example.a_sbd.ui.chats.adapters.SingleChatAdapter
 import javax.inject.Inject
@@ -60,11 +61,11 @@ class SingleChatFragment : Fragment() {
 
         _binding!!.rvSingleChat.adapter = adapter
 
-        singleChatViewModel.messages.observe(requireActivity()) {
+        singleChatViewModel.messages.observe(viewLifecycleOwner) {
             adapter.submitList(it)
         }
 
-        singleChatViewModel.messageSentLiveData.observe(requireActivity()) {
+        singleChatViewModel.messageSentLiveData.observe(viewLifecycleOwner) {
             onMessageSendListener?.onMessageSend(it)
         }
 
@@ -88,7 +89,7 @@ class SingleChatFragment : Fragment() {
 
     private fun setFragmentResult(it: Boolean) {
         requireActivity().supportFragmentManager
-            .setFragmentResult("single_chat_started",
+            .setFragmentResult(FRAGMENT_IN_ACTION,
                 bundleOf(
                     "isSingleChatStarted" to it,
                     "title" to if (it) args.name else ""
@@ -104,5 +105,4 @@ class SingleChatFragment : Fragment() {
     interface OnMessageSendListener {
         fun onMessageSend(message: Message)
     }
-
 }

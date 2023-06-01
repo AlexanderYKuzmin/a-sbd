@@ -1,5 +1,6 @@
 package com.example.a_sbd.ui.chats
 
+import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -23,6 +24,8 @@ class ChatContactsFragment : Fragment() {
     val hasAppComponent: HasAppComponent? = null
 
     private var _binding: FragmentChatContactsBinding? = null
+
+    //private var onChatContactsFragmentCreatedListener: OnChatContactsFragmentCreatedListener? = null
 
     // This property is only valid between onCreateView and
     // onDestroyView.
@@ -82,6 +85,15 @@ class ChatContactsFragment : Fragment() {
         }
     }
 
+    /*override fun onAttach(context: Context) {
+        super.onAttach(context)
+        if (context is ChatContactsFragment.OnChatContactsFragmentCreatedListener) {
+            onChatContactsFragmentCreatedListener = context
+        } else {
+            throw RuntimeException("Activity must implement OnChatContactsFragmentCreatedListener")
+        }
+    }*/
+
     private fun launchPhoneBookContactsDialog() {
         //findNavController().navigate()
         val alertDialog = PhoneBookDialogFragment().apply {
@@ -106,6 +118,10 @@ class ChatContactsFragment : Fragment() {
     interface HasAppComponent {
         fun getAppComponent()
     }
+
+    /*interface OnChatContactsFragmentCreatedListener {
+        fun makeNavbarVisible()
+    }*/
 
     companion object {
         const val CHAT_CONTACT = "contact"

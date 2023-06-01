@@ -60,6 +60,12 @@ class ASBDoRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun getMessageByContactIdLast(contactId: Long): Message? {
+        return chatContactsDao.getMessageByContactIdLast(contactId)?.let {
+            mapper.mapMessageDbToEntity(it)
+        }
+    }
+
     override suspend fun getMessageDelayed(): LiveData<List<Message>> {
         /*val getAll = chatContactsDao.getAll()
         val getAllValue = getAll.value

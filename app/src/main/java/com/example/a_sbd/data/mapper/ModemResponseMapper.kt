@@ -59,6 +59,6 @@ class ModemResponseMapper @Inject constructor() {
     fun parseSBDRINGActivation(modemResponseText: String): Boolean {
         val index = modemResponseText.indexOf('=')
         val mtaStatus = modemResponseText.substring(index + 1, index + 2).toInt()
-        return mtaStatus == 0
+        return mtaStatus == 1
     }
 }

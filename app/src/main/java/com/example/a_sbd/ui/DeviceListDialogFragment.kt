@@ -1,6 +1,7 @@
 package com.example.a_sbd.ui
 
 import android.content.Context
+import android.os.Build
 import android.os.Bundle
 import android.os.Parcelable
 import android.view.LayoutInflater
@@ -22,7 +23,8 @@ class DeviceListDialogFragment : Fragment() {
     private val binding: FragmentDeviceListBinding
         get() = _binding ?: throw RuntimeException("FragmentDeviceListBinding is null")
 
-    private val args by navArgs<DeviceListDialogFragmentArgs>()
+    //private val args by navArgs<DeviceListDialogFragmentArgs>()
+    //private val
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -36,16 +38,16 @@ class DeviceListDialogFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val devices = args.devicesSimple
-        val devicesAsList = devices.toList()
+        /*val devices = args.devicesSimple
+        val devicesAsList = devices.toList()*/
 
-        /*val devices = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            //arguments?.getParcelableArrayList(EXTRA_DEVICES_LIST, DeviceSimple::class.java)
+        val devices = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            arguments?.getParcelableArrayList(EXTRA_DEVICES_LIST, DeviceSimple::class.java)
         } else {
             arguments?.getParcelableArrayList(EXTRA_DEVICES_LIST)
-        } as ArrayList<DeviceSimple>*/
+        } as ArrayList<DeviceSimple>
 
-        val adapter = DeviceAdapterHelper(requireActivity().applicationContext).getAdapter(devicesAsList)
+        val adapter = DeviceAdapterHelper(requireActivity().applicationContext).getAdapter(devices)
         val listView = view.findViewById<ListView>(R.id.lv_device_list)
         listView.adapter = adapter
 
@@ -96,7 +98,7 @@ class DeviceListDialogFragment : Fragment() {
     }
 
     companion object {
-        private const val EXTRA_DEVICES_LIST = "extra_devices_list"
+        const val EXTRA_DEVICES_LIST = "extra_devices_list"
         //private const val EMPTY_SYMBOL = ""
 
         @JvmStatic

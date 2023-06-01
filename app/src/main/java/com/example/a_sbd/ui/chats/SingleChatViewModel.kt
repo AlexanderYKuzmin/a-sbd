@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
 import java.util.*
 
 class SingleChatViewModel (
-    getAllMessagesOfContactUseCase: GetAllMessagesOfContactUseCase,
+    private val getAllMessagesOfContactUseCase: GetAllMessagesOfContactUseCase,
     private val insertMessageUseCase: InsertMessageUseCase,
     private val contactId: Long
 ) : ViewModel() {
@@ -31,14 +31,14 @@ class SingleChatViewModel (
     val messages = getAllMessagesOfContactUseCase(contactId)
 
     fun insertMessageToDb(text: String) {
-        val lastMessage = messages.value?.sortedWith(compareBy(Message::messageDate))?.last()
+        val lastMessageType = messages.value?.sortedWith(compareBy(Message::messageDate))?.lastOrNull()?.messageType
         //val messagesToAdd = mutableListOf<Message>()
         //messagesToAdd.add(
         val messageToAdd = Message(
                 0L,
                 text,
-                if (lastMessage?.messageType == START_OUT || lastMessage?.messageType == NORMAL_OUT)
-                    NORMAL_OUT else START_OUT,
+                if (lastMessageType == START_OUT || lastMessageType == NORMAL_OUT) NORMAL_OUT
+                else START_OUT,
                 Date(),
                 false,
                 contactId

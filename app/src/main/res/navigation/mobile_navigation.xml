@@ -13,16 +13,24 @@
             android:id="@+id/action_navigation_chat_to_single_chat"
             app:destination="@id/single_chat"
             app:popUpTo="@id/navigation_chat" />
-        <action
-            android:id="@+id/action_navigation_chat_to_deviceListDialogFragment"
-            app:destination="@id/deviceListDialogFragment"
-            app:popUpTo="@id/navigation_chat" />
     </fragment>
 
     <fragment
         android:id="@+id/navigation_dashboard"
         android:name="com.example.a_sbd.ui.dashboard.DashboardFragment"
-        tools:layout="@layout/fragment_dashboard" />
+        tools:layout="@layout/fragment_dashboard" >
+
+
+        <!--<action
+            android:id="@+id/action_navigation_dashboard_to_chosen_service"
+            app:destination="@id/chosen_service" />-->
+    </fragment>
+
+    <!--<fragment
+        android:id="@+id/chosen_service"
+        android:name="fr"-->
+
+
 
     <fragment
         android:id="@+id/navigation_notifications"
@@ -56,6 +64,7 @@
         android:name="com.example.a_sbd.ui.ScanningShowFragment"
          />
     <fragment
+        android:label="Соединение..."
         android:id="@+id/connectShowFragment"
         android:name="com.example.a_sbd.ui.ConnectShowFragment"
         />

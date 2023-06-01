@@ -5,11 +5,11 @@ import android.bluetooth.le.BluetoothLeScanner
 import android.bluetooth.le.ScanResult
 import android.content.*
 import android.graphics.Typeface
-import android.os.Build
 import android.os.Build.VERSION
 import android.os.Build.VERSION_CODES
 import android.os.Bundle
 import android.os.IBinder
+import android.os.Parcelable
 import android.util.Log
 import android.view.*
 import android.widget.ImageView
@@ -47,7 +47,7 @@ import com.example.a_sbd.services.BleService.Companion.ACTION_SERVICE_CONNECTED
 import com.example.a_sbd.services.BleService.Companion.ACTION_SERVICE_IDLE
 import com.example.a_sbd.services.BleService.Companion.ACTION_SIGNAL_LEVEL
 import com.example.a_sbd.ui.MainActivityViewModel.Companion.WRONG_ID
-import com.example.a_sbd.ui.chats.ChatContactsFragmentDirections
+import com.example.a_sbd.ui.chats.ChatContactsFragment
 import com.example.a_sbd.ui.chats.SingleChatFragment
 //import com.example.a_sbd.services.BleService
 //import com.example.a_sbd.services.ScanServiceConnection
@@ -116,7 +116,7 @@ class MainActivity :
         registerGattUpdateReceiver()
 
         supportFragmentManager
-            .setFragmentResultListener("single_chat_started", this)
+            .setFragmentResultListener(FRAGMENT_IN_ACTION, this)
             { str, bundle ->
                 Log.d("MainActivity", "BTN in fragment pressed!!!!")
                 if (bundle.getBoolean("isSingleChatStarted")) {
@@ -157,9 +157,10 @@ class MainActivity :
         }
 
         viewModel.appState.observe(this) {
-            if (stateConnected  != it.isBleConnectedIcon) {   // check it out , maybe remove condition
-                navController.popBackStack(R.id.deviceListDialogFragment, true)
-            }
+            /*if (stateConnected  != it.isBleConnectedIcon) {   // check it out , maybe remove condition
+                //navController.popBackStack(R.id.deviceListDialogFragment, true)
+                supportFragmentManager.popBackStack()
+            }*/
             renderUi(it)
         }
 
@@ -182,11 +183,21 @@ class MainActivity :
             }
         }
 
+        viewModel.isTimeToStartSession.observe(this) {
+            if(it) {
+                viewModel.stopDepartureTimer()
+                bleService?.checkSignalLevel()
+            }
+        }
+
         viewModel.checkSignalAndStartSession.observe(this) {
-            bleService?.checkSignalLevel()
+            viewModel.stopDepartureTimer()
+            //bleService?.checkSignalLevel()
+            bleService?.setSbdRingStateInActive(false)
         }
 
         viewModel.startSession.observe(this) {
+            viewModel.stopDepartureTimer()
             bleService?.openSession()  //no need open session at once. First we need to check for unsent messages.
         }
 
@@ -231,7 +242,6 @@ class MainActivity :
     override fun onDestroy() {
         super.onDestroy()
         workManager.cancelAllWork()
-        unregisterReceiver(scanBroadcastReceiver)
 
         Log.d(TAG, "On destroy")
     }
@@ -242,7 +252,7 @@ class MainActivity :
                 viewModel.stopScan()
             }
             R.id.connectShowFragment -> {
-
+                bleService?.disconnect()
             }
         }
         super.onBackPressed()
@@ -287,6 +297,7 @@ class MainActivity :
             when (intent.action) {
                 ACTION_GATT_CONNECTED -> {
                     //_isBleConnected = intent.getBooleanExtra(BleService.IS_CONNECTED, false)
+                    navController.popBackStack(R.id.deviceListDialogFragment, true)
                     viewModel.updateAppStateConnected(true)
                     viewModel.defaultActionsAfterConnectionSet(this@MainActivity) // todo init preparations
                 }
@@ -334,7 +345,7 @@ class MainActivity :
             if (intent.hasExtra(BluetoothLeScanner.EXTRA_LIST_SCAN_RESULT)) {
                 Log.d(TAG, "onReceive intent has extra EXTRA_LIST_SCAN_RESULT")
 
-                val results = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                val results = if (VERSION.SDK_INT >= VERSION_CODES.TIRAMISU) {
                     intent.getParcelableArrayListExtra(BluetoothLeScanner.EXTRA_LIST_SCAN_RESULT, ScanResult::class.java)
                 } else {
                     intent.getParcelableArrayListExtra(BluetoothLeScanner.EXTRA_LIST_SCAN_RESULT)
@@ -494,9 +505,19 @@ class MainActivity :
     }
 
     private fun launchShowDevicesFragment(devicesSimple: List<DeviceSimple>) {
-        navController.navigate(
+        /*navController.navigate(
             ChatContactsFragmentDirections.actionNavigationChatToDeviceListDialogFragment(devicesSimple.toTypedArray())
-        )
+        )*/
+        Log.d(TAG, "Show Devices: ")
+        devicesSimple.forEach { Log.d(TAG, "name: ${it.name}, address: ${it.address}") }
+
+        val bundle = Bundle().apply {
+            putParcelableArrayList(DeviceListDialogFragment.EXTRA_DEVICES_LIST, devicesSimple as ArrayList<out Parcelable>)
+        }
+        navController.navigate(R.id.deviceListDialogFragment, bundle)
+        /*supportFragmentManager.beginTransaction()
+            .replace(R.id.container, DeviceListDialogFragment.newInstance(devicesSimple))
+            .commit()*/
     }
 
     private fun launchShowConnectFragment() {
@@ -504,7 +525,9 @@ class MainActivity :
     }
 
     // Listen click in device list
+
     override fun onDeviceItemClick(position: Int) {
+
         isDevicesListLocked = false
         launchShowConnectFragment()
 
@@ -531,6 +554,8 @@ class MainActivity :
     companion object {
         const val TAG = "service"
         //const val SCAN_TAG = "scan_tag"
+
+        const val FRAGMENT_IN_ACTION = "which_fragment_in_action"
 
         const val SINGLE_CHAT_MODE = 200
         const val CHAT_CONTACTS_MODE = 201

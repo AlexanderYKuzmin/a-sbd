@@ -23,6 +23,9 @@ interface ChatContactsDao {
     @Query("SELECT * FROM messages WHERE id == :id")
     fun getMessage(id: Long): MessageDb?
 
+    @Query("SELECT * FROM messages WHERE contact_id = :contactId ORDER BY id DESC LIMIT 1")
+    fun getMessageByContactIdLast(contactId: Long): MessageDb?
+
     //@Query("SELECT * FROM messages WHERE id == (SELECT MIN(id) FROM messages WHERE is_departed == 0)")
     @Query("SELECT * FROM messages WHERE is_departed == 0 ORDER BY id")
     fun getMessageDelayed(): LiveData<List<MessageDb>>
@@ -30,8 +33,8 @@ interface ChatContactsDao {
     @Query("SELECT * FROM messages WHERE contact_id == :contactId")
     fun getMessages(contactId: Long): LiveData<List<MessageDb>>
 
-    @Query("SELECT * FROM messages WHERE contact_id =: contactId AND (type = 'start_in' OR type = 'normal_in'")
-    fun getMessagesByContactIdIncome(contactId: Long): List<MessageDb>
+    @Query("SELECT * FROM messages WHERE contact_id =:contactId AND (type = 'start_in' OR type = 'normal_in')")
+    suspend fun getMessagesByContactIdIncome(contactId: Long): List<MessageDb>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertContacts(chatContactDbs: Array<ChatContactDb>)

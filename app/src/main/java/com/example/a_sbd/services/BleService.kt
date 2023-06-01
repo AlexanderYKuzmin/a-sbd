@@ -71,8 +71,13 @@ class BleService : LifecycleService() {
         }
     }
 
+    @SuppressLint("MissingPermission")
     fun disconnect() {
-        bluetoothGatt = null
+        if (bluetoothGatt == null) {
+            Log.w(TAG, "Bluetooth gatt is not initialized")
+        }
+        bluetoothGatt?.disconnect()
+        bluetoothGatt?.close()
     }
 
     /*fun enableSignalLevelReport(enabled: Boolean) {
@@ -122,13 +127,6 @@ class BleService : LifecycleService() {
     @SuppressLint("MissingPermission")
     private fun writeCharacteristic(modemCommand: String, parameters: String?) {
         //_isServiceIdle = false
-        if (modemCommand != SBDRING_DISACTIVATED) {
-            setSbdRingStateInActive(false)
-            while (_isSbdRingActive) {
-                Log.d(TAG, "SBDRING is active. Awaiting for turn it off.")
-                Thread.sleep(100)
-            }
-        }
         val value = if (parameters != null) {
             modemCommand + COMMAND_DELIMITER + parameters + END_OF_COMMAND
         } else {
@@ -234,10 +232,13 @@ class BleService : LifecycleService() {
                     checkSignalLevel()
                 }
                 value.contains("SBDMTA") -> {
+                    Log.d(TAG, "Response contains SBDMTA.")
                     val isSbdRingEnabled = mapper.parseSBDRINGActivation(value)
+                    Log.d(TAG, "isSbdRingEnabled: $isSbdRingEnabled")
                     if (!isSbdRingEnabled) {
                         _isSbdRingActive = false
-                        clearMoBuffer()
+                        //clearMoBuffer()
+                        checkSignalLevel()
                     } else _isSbdRingActive = true
                 }
             }
@@ -281,6 +282,9 @@ class BleService : LifecycleService() {
         const val MT_MSN = "mtMsn"
         const val QUEUE_LENGTH = "queueLength"
         const val MESSAGE_ID = "message_id"
+
+        private const val MO_BUFFER = "0"  //for departure
+        private const val MT_BUFFER = "1"  //for reception
 
     }
 }

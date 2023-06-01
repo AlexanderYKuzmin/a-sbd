@@ -28,9 +28,9 @@
 
     <TextView
         android:id="@+id/tv_message_time_start_out"
-        android:layout_width="0dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:minWidth="100dp"
+        android:minWidth="30dp"
         android:padding="2dp"
         android:textAlignment="textEnd"
         android:layout_marginBottom="4dp"
@@ -40,6 +40,19 @@
         app:layout_constraintEnd_toStartOf="@id/tv_message_text_start_out"
         app:layout_constraintBottom_toBottomOf="@id/tv_message_text_start_out"
         app:layout_constraintTop_toTopOf="@id/tv_message_text_start_out"
-        tools:text="24:07"/>
+        tools:text="24:07">
+    </TextView>
+
+    <ImageView
+        android:id="@+id/iv_departed_start_out"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintEnd_toStartOf="@id/tv_message_time_start_out"
+        app:layout_constraintBottom_toBottomOf="@id/tv_message_time_start_out"
+        app:layout_constraintTop_toTopOf="@id/tv_message_time_start_out"
+        android:src="@drawable/ic_baseline_check_24"
+        android:visibility="invisible"
+        />
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>

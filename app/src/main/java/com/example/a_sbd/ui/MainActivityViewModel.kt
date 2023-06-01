@@ -27,6 +27,7 @@ import com.example.a_sbd.services.BleService.Companion.MESSAGE_ID
 import com.example.a_sbd.services.BleService.Companion.MO_STATUS
 import com.example.a_sbd.services.BleService.Companion.MT_STATUS
 import com.example.a_sbd.ui.MainActivity.Companion.TAG
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.util.Date
@@ -36,6 +37,7 @@ class MainActivityViewModel @Inject constructor(
     application: Application,
     private val scanUseCase: ScanUseCase,
     private val getMessageUseCase: GetMessageUseCase,
+    private val getLastMessageByContactidUseCase: GetLastMessageByContactIdUseCase,
     private val getAllMessagesUnsentUseCase: GetAllMessagesUnsentUseCase,
     private val getMessagesByContactIdIncomeUseCase: GetMessagesByContactIdIncomeUseCase,
     private val updateMessageUseCase: UpdateMessageUseCase,
@@ -46,6 +48,8 @@ class MainActivityViewModel @Inject constructor(
     private val clearDatabaseByDateUseCase: ClearDatabaseByDateUseCase,
     private val insertMessageByTextUseCase: InsertMessageByTextUseCase
 ) : ViewModel() {
+
+    private val departReminderUseCase = DepartReminderUseCase(viewModelScope)
 
     val context = application
     private val _appState = MutableLiveData(AppState())
@@ -93,6 +97,8 @@ class MainActivityViewModel @Inject constructor(
     private var _isMessageDeparted = true
 
     lateinit var messagesUnsent: LiveData<List<Message>>
+
+    val isTimeToStartSession = departReminderUseCase.isTimeToStartSession
 
     init {
         Log.d(TAG, "Init view model started")
@@ -195,6 +201,10 @@ class MainActivityViewModel @Inject constructor(
         scanUseCase.invoke(false)
     }
 
+    fun startDepartureTimer(duration: Int) = departReminderUseCase.startTimer(duration)
+
+    fun stopDepartureTimer() = departReminderUseCase.resetTimer()
+
     //private var isBleConnectedInFact = false  // observe this and set signal level
     /*private val _isBleConnectedInFact = MutableLiveData(false)
     val isBleConnectedInFact: LiveData<Boolean>
@@ -207,18 +217,24 @@ class MainActivityViewModel @Inject constructor(
     @SuppressLint("MissingPermission")
     fun handleBleScanResult(results: List<ScanResult>?) {
         Log.d(TAG, "Handling scan results in view model...")
+        Log.d(TAG, "Results: ")
+        results?.forEach { Log.d(TAG, "Device name: ${it.device.name}, device address: ${it.device.address}") }
         _devicesSimple.value =
             results?.map { scanResult -> DeviceSimple(scanResult.device.name, scanResult.device.address) }
     }
 
     fun handleSignalQuality(signal: Int) {
-        if (signal > 2)
+        if (signal > 2) {
             _startSession.value = Unit
-        else Log.d(TAG, "Signal is too low $signal") // todo make a notice to screen
+        }
+        else {
+            Log.d(TAG, "Signal is too low: $signal. The Departure timer is starting.")
+            startDepartureTimer(LOW_SIGNAL_DURATION)
+        } // todo make a notice to screen
     }
 
     private var attemptCount = 0
-    fun handleDataAvailable(jsonStringSessionData: String) {  // todo I need ID of message departed
+    fun handleDataAvailable(jsonStringSessionData: String) {
         val sessionData = jsonConverter.fromJsonToMapSessionParameters(jsonStringSessionData)
         if (
             sessionData[MO_STATUS] != MO_MESSAGE_TRANSFER_SUCCESSFUL &&
@@ -239,19 +255,22 @@ class MainActivityViewModel @Inject constructor(
                 _startReadBuffer.value = Unit
             }
             sessionData[MT_STATUS] == MT_MESSAGE_ERROR -> {
-                Thread.sleep(1000)
                 if (attemptCount < 3) {
                     attemptCount++
                     Log.d(TAG, "MT message error: ${sessionData[MT_STATUS]}")
-                    _startSession.value = Unit
+                    //_startSession.value = Unit
+                    startDepartureTimer(DEPARTURE_ERROR_DURATION)
                 }
+
             }
             sessionData[MT_STATUS] == MT_NO_SBD_MESSAGE_TO_RECEIVE -> {
                 Log.d(TAG, "MT message no to receive: ${sessionData[MT_STATUS]}")
 
                 if (!_isMessageDeparted) { // todo check it out. Create the deque or something
-                    Thread.sleep(1000)
-                    if (attemptCount < 3) _startSession.value = Unit
+                    if (attemptCount < 3) {
+                        //_startSession.value = Unit
+                        startDepartureTimer(DEPARTURE_ERROR_DURATION)
+                    }
                 }
                 else _activateSbdRing.value = true
             }
@@ -264,17 +283,20 @@ class MainActivityViewModel @Inject constructor(
     }
 
     fun handleMessageIncome(text: String, contactId: Long) {
-        var lastMesssageIncome: Message? = null
-        runBlocking {
+        //var lastMesssageIncome: Message? = null
+        var lastMessage: Message? = null
+        runBlocking(Dispatchers.IO) {
             val jobGetAllBYContact = launch {
-                lastMesssageIncome = getMessagesByContactIdIncomeUseCase(contactId).last()
+                //lastMesssageIncome = getMessagesByContactIdIncomeUseCase(contactId).lastOrNull()
+                lastMessage = getLastMessageByContactidUseCase(contactId)
             }
             jobGetAllBYContact.join()
 
             launch {
                 insertMessageByTextUseCase(
-                    text,
-                    if (lastMesssageIncome == null) MessageType.START_IN else MessageType.NORMAL_IN,
+                    text.trim(),
+                    //if (lastMesssageIncome == null) MessageType.START_IN else MessageType.NORMAL_IN,
+                    lastMessage?.messageType?.nextTypeForIncoming() ?: MessageType.START_IN,
                     contactId
                 )
             }
@@ -355,6 +377,8 @@ class MainActivityViewModel @Inject constructor(
         const val SIGNAL_LEVEL_ZERO = 0
         const val WRONG_ID = -1L
 
+        const val LOW_SIGNAL_DURATION = 1
+        const val DEPARTURE_ERROR_DURATION = 3
     }
 
     data class AppState(

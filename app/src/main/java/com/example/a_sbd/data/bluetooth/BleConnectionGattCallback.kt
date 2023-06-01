@@ -130,7 +130,7 @@ class BleConnectionGattCallback(
             responseBuilder.append(value)
         }*/
         responseBuilder.append(value)
-        return (value.startsWith("SBDRING") || value.endsWith("OK"))
+        return (value.startsWith("SBDRING") || responseBuilder.endsWith("OK")) //todo need for verification instead of value.endsWith...
         //return false
     }
 

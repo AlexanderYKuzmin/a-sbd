@@ -2,6 +2,7 @@ package com.example.a_sbd.ui.chats.adapters
 
 import android.content.Context
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.ListAdapter
 import com.example.a_sbd.R
@@ -63,6 +64,8 @@ class SingleChatAdapter(
                     this as ItemSingleChatOutBinding
                     tvMessageTextStartOut.text = currentMessage.text
                     tvMessageTimeStartOut.text = currentMessage.messageDate.formatToTime()
+                    ivDepartedStartOut.visibility =
+                        if(currentMessage.isDeparted) View.VISIBLE else View.INVISIBLE
                 }
                 ITEM_DEFAULT_IN -> {
                     this as ItemSingleChatDefaultInBinding
@@ -74,6 +77,8 @@ class SingleChatAdapter(
                     this as ItemSingleChatDefaultOutBinding
                     tvMessageTextDefaultOut.text = currentMessage.text
                     tvMessageTimeDefaultOut.text = currentMessage.messageDate.formatToTime()
+                    ivDepartedDefaultOut.visibility =
+                        if(currentMessage.isDeparted) View.VISIBLE else View.INVISIBLE
                 }
                 else -> this as ItemSingleChatDividerBinding
             }

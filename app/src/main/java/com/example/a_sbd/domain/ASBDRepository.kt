@@ -17,6 +17,8 @@ interface ASBDRepository {
 
     suspend fun getMessage(id: Long): Message?
 
+    suspend fun getMessageByContactIdLast(contactId: Long): Message?
+
     suspend fun getMessageDelayed(): LiveData<List<Message>>
 
     fun getMessages(contactId: Long): LiveData<List<Message>>
