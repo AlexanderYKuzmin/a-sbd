@@ -133,7 +133,7 @@ class BleService : LifecycleService() {
             modemCommand + END_OF_COMMAND
         }.toByteArray()
 
-        Log.d(TAG, "Write characteristic: $value")
+        Log.d(TAG, "Write characteristic: ${String(value)}")
         bluetoothGatt?.let {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) { // 33
                     it.writeCharacteristic(characteristic!!, value , BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT)
@@ -210,6 +210,7 @@ class BleService : LifecycleService() {
                     updateBroadcast(ACTION_SIGNAL_LEVEL, signal)
                 }
                 value.contains("SBDIX") -> {
+                    Log.d(TAG, "Response contains SBDIX. Parse session data.")
                     val sessionData = mapper.parseSBDIXResponse(value) as HashMap
                     if (messageIdInBuffer != -1L) sessionData[MESSAGE_ID] = messageIdInBuffer.toInt() // todo change map to data class may be
                     updateBroadcast(ACTION_DATA_AVAILABLE, jsonConverter.toJson(sessionData))

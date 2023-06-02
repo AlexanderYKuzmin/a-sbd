@@ -243,6 +243,7 @@ class MainActivityViewModel @Inject constructor(
         ) {
             _isMessageDeparted = false
         } else {
+            Log.d(TAG, "No errors with departure. Set departed status to TRUE and reset ID message in BleService.")
             _isMessageDeparted = true
             _resetMessageIdInService.value = Unit
             viewModelScope.launch { sessionData[MESSAGE_ID]?.let { updateMessageByIdToDeparted(it.toLong()) } }
@@ -269,6 +270,7 @@ class MainActivityViewModel @Inject constructor(
                 if (!_isMessageDeparted) { // todo check it out. Create the deque or something
                     if (attemptCount < 3) {
                         //_startSession.value = Unit
+                        Log.d(TAG, "Start departure timer. Cause isDeparted: $_isMessageDeparted")
                         startDepartureTimer(DEPARTURE_ERROR_DURATION)
                     }
                 }
@@ -316,12 +318,17 @@ class MainActivityViewModel @Inject constructor(
         _deviceAddressConnected.value = null
     }
 
+    private var isStartDefaultActionDone = false
     fun defaultActionsAfterConnectionSet(owner: LifecycleOwner) {
+
         messagesUnsent.observe(owner) {
             if (it.isNotEmpty()) {
                 _startWriteBuffer.value = it.first()
             } else {
-                _checkSignalAndStartSession.value = Unit
+                if (!isStartDefaultActionDone) {
+                    isStartDefaultActionDone = true
+                    _checkSignalAndStartSession.value = Unit
+                }
             }
         }
     }

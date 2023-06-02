@@ -212,7 +212,7 @@ class MainActivity :
         }
 
         viewModel.activateSbdRing.observe(this) {
-            Log.d(TAG, "Activity. Set SBDRING.")
+            Log.d(TAG, "Activity. Set SBDRING: $it")
             bleService?.setSbdRingStateInActive(it)
         }
 
@@ -293,7 +293,7 @@ class MainActivity :
 
     private val gattUpdateReceiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            Log.d(TAG, "Broadcast receive")
+            Log.d(TAG, "Broadcast receiver")
             when (intent.action) {
                 ACTION_GATT_CONNECTED -> {
                     //_isBleConnected = intent.getBooleanExtra(BleService.IS_CONNECTED, false)
@@ -320,8 +320,8 @@ class MainActivity :
                     } else {
                         intent.getSerializableExtra(ACTION_DATA_AVAILABLE) as String
                     }
-                    viewModel.handleDataAvailable(jsonStringSessionData!!)
                     Log.d(TAG, "Session parameters from broadcast: ${jsonStringSessionData}")
+                    viewModel.handleDataAvailable(jsonStringSessionData!!)
                 }
                 ACTION_DATA_WRITTEN -> {
                     val id = intent.getLongExtra(ACTION_DATA_WRITTEN, -1)
